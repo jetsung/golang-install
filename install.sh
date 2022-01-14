@@ -22,15 +22,15 @@ load_vars() {
     GOPROXY_TEXT="https://proxy.golang.org"
 
     # Set environmental for golang
-    PROFILE="\$HOME/.bashrc"
+    PROFILE="${HOME}/.bashrc"
 
     # Set GOPATH PATH
-    GO_PATH="\$HOME/.go/path"
+    GO_PATH="~/.go/path"
 
     # Is GWF
     IN_CHINA=0
 
-    PROJECT_URL="https://github.com/flydo/golang-install"
+    PROJECT_URL="https://github.com/skiy/golang-install"
 }
 
 # check in china
@@ -55,7 +55,12 @@ custom_version() {
 # create GOPATH folder
 create_gopath() {
     if [ ! -d "${GO_PATH}" ]; then
-        mkdir -p "${GO_PATH}"
+        if [ "${GO_PATH}" = "~/.go/path" ]; then
+            mkdir -p ~/.go/path
+            GO_PATH="\$HOME/.go/path"
+        else
+            mkdir -p "${GO_PATH}"
+        fi
     fi
 }
 
@@ -182,7 +187,7 @@ download_file() {
 
 # Download file and unpack
 download_unpack() {
-    [ ! -d "${HOME}/.go" ] && mkdir "${HOME}/.go"
+    [ ! -d ~/.go ] && mkdir ~/.go
 
     printf "Fetching ${1} \n\n"
 
@@ -197,9 +202,11 @@ set_environment() {
     #test ! -e "${PROFILE}" && PROFILE="${HOME}/.bashrc"
 
     # check .zshrc on MacOS
-    if [ -f "${HOME}/.zshrc" ] && [ -z "`grep ${PROFILE} ${HOME}/.zshrc`" ];then
-            echo -e "\n. ${PROFILE}" >> "${HOME}/.zshrc"
+    if [ -f "${HOME}"/.zshrc ] && [ -z "`grep \~\/\.bashrc ${HOME}/.zshrc`" ];then
+            echo -e "\n. ~/.bashrc" >> "${HOME}/.zshrc"
 	fi
+
+    [ ! -f "~/.bashrc" ] && touch ~/.bashrc
 
     if [ -z "`grep 'export\sGOROOT' ${PROFILE}`" ];then
         echo -e "\n## GOLANG" >> "${PROFILE}"
@@ -256,7 +263,7 @@ printf "
 ###  Link:    https://jetsung.com
 ###  Project: %s
 ###############################################################
-\n" $PROJECT_URL
+\n" "${PROJECT_URL}"
 }
 
 # show system information
@@ -267,7 +274,7 @@ printf "
 ###  Bit: %s 
 ###  Version: %s 
 ###############################################################
-\n" $OS $BIT $RELEASE_TAG
+\n" "${OS}" "${BIT}" "${RELEASE_TAG}"
 }
 
 # Show success message
@@ -290,7 +297,7 @@ Options:
   -h            : this help
   -v            : set go version (default: latest version)
   -d            : set go path (default: %s/.go/path)
-\n" $SCRIPT_NAME $HOME
+\n" "${SCRIPT_NAME}" "${HOME}"
 exit 1
 }
 
