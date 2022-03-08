@@ -16,7 +16,7 @@
 ### 在线安装
 #### 默认安装
 ```sh
-curl -fsL https://jihulab.com/skiy/golang-install/-/raw/main/install.sh | bash
+curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/install.sh | bash
 ```
 
 #### 自定义安装
@@ -24,7 +24,7 @@ curl -fsL https://jihulab.com/skiy/golang-install/-/raw/main/install.sh | bash
 - **MY_DIY_GO_PATH** 是自定义版本号, 例如： ```/home/myhome/go```
 
 ```sh
-curl -fsL https://jihulab.com/skiy/golang-install/-/raw/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -d MY_DIY_GO_PATH
+curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -d MY_DIY_GO_PATH
 ```
 
 ### 离线执行
