@@ -16,7 +16,7 @@ English | [简体中文](./README_CN.md)
 ### Online
 #### Default install 
 ```sh
-curl -fsL https://raw.githubusercontent.com/skiy/golang-install/main/install.sh | bash
+curl -fsL https://raw.githubusercontent.com/jetsung/golang-install/main/install.sh | bash
 ```
 
 #### Custom version   
@@ -24,7 +24,7 @@ curl -fsL https://raw.githubusercontent.com/skiy/golang-install/main/install.sh 
 - **MY_DIY_GO_PATH** is a custom gopath, such as： ```/home/myhome/go```
 
 ```sh
-curl -fsL https://raw.githubusercontent.com/skiy/golang-install/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -d MY_DIY_GO_PATH
+curl -fsL https://raw.githubusercontent.com/jetsung/golang-install/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -d MY_DIY_GO_PATH
 ```
 
 ### Offline
