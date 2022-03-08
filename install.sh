@@ -2,8 +2,8 @@
 
 # Golang-Install
 # Project Home Page:
-# https://github.com/skiy/golang-install
-# https://jihulab.com/skiy/golang-install
+# https://github.com/jetsung/golang-install
+# https://jihulab.com/jetsung/golang-install
 #
 # Author: Jetsung Chan <skiy@jetsung.com>
 
@@ -25,12 +25,12 @@ load_vars() {
     PROFILE="${HOME}/.bashrc"
 
     # Set GOPATH PATH
-    GO_PATH="~/.go/path"
+    GO_PATH="~/go"
 
     # Is GWF
     IN_CHINA=0
 
-    PROJECT_URL="https://github.com/skiy/golang-install"
+    PROJECT_URL="https://github.com/jetsung/golang-install"
 }
 
 # check in china
@@ -39,8 +39,8 @@ check_in_china() {
     if [ "$urlstatus" == "" ]; then
         IN_CHINA=1
         RELEASE_URL="https://golang.google.cn/dl/"
-        GOPROXY_TEXT="https://goproxy.io,https://goproxy.cn"   
-        PROJECT_URL="https://jihulab.com/skiy/golang-install"
+        GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"   
+        PROJECT_URL="https://jihulab.com/jetsung/golang-install"
     fi
 }
 
@@ -55,9 +55,9 @@ custom_version() {
 # create GOPATH folder
 create_gopath() {
     if [ ! -d "${GO_PATH}" ]; then
-        if [ "${GO_PATH}" = "~/.go/path" ]; then
-            mkdir -p ~/.go/path
-            GO_PATH="\$HOME/.go/path"
+        if [ "${GO_PATH}" = "~/go" ]; then
+            mkdir -p ~/go
+            GO_PATH="\$HOME/go"
         else
             mkdir -p "${GO_PATH}"
         fi
@@ -187,44 +187,41 @@ download_file() {
 
 # Download file and unpack
 download_unpack() {
-    [ ! -d ~/.go ] && mkdir ~/.go
-
     printf "Fetching ${1} \n\n"
 
-    pushd "${HOME}/.go" > /dev/null
-        curl -Lk --retry 3 "${1}" | gunzip | tar x 
-    popd  > /dev/null
+    rm -rf ~/.go
+
+    curl -Lk --retry 3 "${1}" | gunzip | tar xf - -C /tmp
+
+    mv /tmp/go ~/.go
 }
 
 # set golang environment
 set_environment() {
-    #test ! -e "${PROFILE}" && PROFILE="${HOME}/.bash_profile"
-    #test ! -e "${PROFILE}" && PROFILE="${HOME}/.bashrc"
-
     # check .zshrc on MacOS
     if [ -f "${HOME}"/.zshrc ] && [ -z "`grep \~\/\.bashrc ${HOME}/.zshrc`" ];then
-            echo -e "\n. ~/.bashrc" >> "${HOME}/.zshrc"
+        echo -e "\n. ~/.bashrc" >> "${HOME}/.zshrc"
 	fi
 
     [ ! -f "~/.bashrc" ] && touch ~/.bashrc
 
     if [ -z "`grep 'export\sGOROOT' ${PROFILE}`" ];then
         echo -e "\n## GOLANG" >> "${PROFILE}"
-        echo "export GOROOT=\"\$HOME/.go/go\"" >> "${PROFILE}"
+        echo "export GOROOT=\"\$HOME/.go\"" >> "${PROFILE}"
     else
-        sed -i "" -e "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go/go\"@" "${PROFILE}"
+        sed -i "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
     fi
 
     if [ -z "`grep 'export\sGOPATH' ${PROFILE}`" ];then
         echo "export GOPATH=\"${GO_PATH}\"" >> "${PROFILE}"
     else
-        sed -i "" -e "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
+        sed -i "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
     fi
     
     if [ -z "`grep 'export\sGOBIN' ${PROFILE}`" ];then
         echo "export GOBIN=\"\$GOPATH/bin\"" >> ${PROFILE}
     else 
-        sed -i "" -e "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"        
+        sed -i "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
     fi   
 
     if [ -z "`grep 'export\sGO111MODULE' ${PROFILE}`" ];then
@@ -296,7 +293,7 @@ Usage: %s [-h] [-v version] [-d gopath]
 Options:
   -h            : this help
   -v            : set go version (default: latest version)
-  -d            : set go path (default: %s/.go/path)
+  -d            : set go path (default: %s/go)
 \n" "${SCRIPT_NAME}" "${HOME}"
 exit 1
 }
@@ -327,17 +324,9 @@ main() {
 
     # Download File
     BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
-    # DOWNLOAD_FILE="$(mktemp).tar.gz"
-    # download_file $BINARY_URL $DOWNLOAD_FILE
-
-    # Remove go src
-    rm -rf "${HOME}/.go/go"
 
     # Create GOPATH
     create_gopath
-
-    # tar -C ${HOME}/.go -zxf $DOWNLOAD_FILE
-    # rm -rf $DOWNLOAD_FILE
 
     # Download and unpack
     download_unpack "${BINARY_URL}"

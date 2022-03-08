@@ -9,8 +9,8 @@
 [English](./README.md) | 简体中文
 
 #### 注意
-- 由于 “raw.githubusercontent.com” 已被墙，故英文版本的地址已失效。
-- 默认安装最新版本的 **go version**, **GOPATH** 目录为 ```~/.go/path```
+- GOROOT: `~/.go`
+- 默认安装最新版本的 **go version**, **GOPATH** 目录为 ```~/go```
 
 ## 安装
 ### 在线安装
@@ -60,7 +60,7 @@ Usage: ./install.sh [-h] [-v version] [-d gopath]
 Options:
   -h            : this help
   -v            : set go version (default: latest version)
-  -d            : set go path (default: ~/.go/path)
+  -d            : set go path (default: ~/go)
 ```
 
 ## License
