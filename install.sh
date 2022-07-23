@@ -230,6 +230,12 @@ set_environment() {
         fi
     fi       
 
+    if [ -z "`grep 'export\sASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH' ${PROFILE}`" ];then
+        if version_ge "${RELEASE_TAG}" "go1.17"; then
+            echo "export ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.18" >> "${PROFILE}"
+        fi
+    fi
+
     if [ "${IN_CHINA}" == "1" ]; then 
         if [ -z "`grep 'export\sGOSUMDB' ${PROFILE}`" ];then
             echo "export GOSUMDB=off" >> "${PROFILE}"
