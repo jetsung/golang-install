@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Golang-Install
 # Project Home Page:
 # https://github.com/jetsung/golang-install
 # https://jihulab.com/jetsung/golang-install
 #
-# Author: Jetsung Chan <skiy@jetsung.com>
+# Author: Jetsung Chan <jetsungchan@gmail.com>
 
 # load var
 load_vars() {
@@ -19,10 +19,10 @@ load_vars() {
     DOWNLOAD_URL="https://dl.google.com/go/"
 
     # GOPROXY
-    GOPROXY_TEXT="https://proxy.golang.org"
+    DEFAULT_GOPROXY="https://proxy.golang.org"
 
     # Set environmental for golang
-    PROFILE="${HOME}/.bashrc"
+    DEFAULT_PROFILE="${HOME}/.bashrc"
 
     # Set GOPATH PATH
     GO_PATH="~/go"
@@ -36,7 +36,7 @@ load_vars() {
 # check in china
 check_in_china() {
     urlstatus=$(curl -s -m 3 -IL https://google.com | grep 200)
-    if [ "$urlstatus" == "" ]; then
+    if [ "${urlstatus}" == "" ]; then
         IN_CHINA=1
         RELEASE_URL="https://golang.google.cn/dl/"
         GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"   
@@ -196,32 +196,45 @@ download_unpack() {
     mv /tmp/go ~/.go
 }
 
+# set golang environments
+set_envs() {
+    envs="${HOME}/.bashrc ${HOME}/.zshrc"
+    for env in ${envs}; do
+        set_environment "${env}"
+    done
+}
+
 # set golang environment
 set_environment() {
     # check .zshrc on MacOS
-    if [ -f "${HOME}"/.zshrc ] && [ -z "`grep \~\/\.bashrc ${HOME}/.zshrc`" ];then
-        echo -e "\n. ~/.bashrc" >> "${HOME}/.zshrc"
+    if [ ! -f "${1}" ];then
+        echo -e "\n No found file: ${1}"
+        return
 	fi
 
-    [ ! -f "~/.bashrc" ] && touch ~/.bashrc
+    PROFILE="${1}"
+    GOPROXY_TEXT="${DEFAULT_GOPROXY}"
+
+    SED_CMD='sed -i '
+    [ OS = 'darwin' ] && SED_CMD="${SED_CMD} \"\" "
 
     if [ -z "`grep 'export\sGOROOT' ${PROFILE}`" ];then
         echo -e "\n## GOLANG" >> "${PROFILE}"
         echo "export GOROOT=\"\$HOME/.go\"" >> "${PROFILE}"
     else
-        sed -i "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
+        ${SED_CMD} "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
     fi
 
     if [ -z "`grep 'export\sGOPATH' ${PROFILE}`" ];then
         echo "export GOPATH=\"${GO_PATH}\"" >> "${PROFILE}"
     else
-        sed -i "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
+        ${SED_CMD} "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
     fi
     
     if [ -z "`grep 'export\sGOBIN' ${PROFILE}`" ];then
         echo "export GOBIN=\"\$GOPATH/bin\"" >> ${PROFILE}
     else 
-        sed -i "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
+        ${SED_CMD} "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
     fi   
 
     if [ -z "`grep 'export\sGO111MODULE' ${PROFILE}`" ];then
@@ -262,7 +275,7 @@ printf "
 ###############################################################
 ###  Golang Install
 ###
-###  Author:  Jetsung Chan <skiy@jetsung.com>
+###  Author:  Jetsung Chan <jetsungchan@gmail.com>
 ###  Link:    https://jetsung.com
 ###  Project: %s
 ###############################################################
@@ -337,7 +350,8 @@ main() {
     # Download and unpack
     download_unpack "${BINARY_URL}"
     
-    set_environment
+    # Set ENV
+    set_envs
     
     show_success_message
 }
