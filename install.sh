@@ -25,7 +25,7 @@ load_vars() {
     DEFAULT_PROFILE="${HOME}/.bashrc"
 
     # Set GOPATH PATH
-    GO_PATH="~/go"
+    GO_PATH="\$HOME/go"
 
     # Is GWF
     IN_CHINA=0
@@ -340,7 +340,7 @@ main() {
 
     latest_version
 
-    compare_version
+    #compare_version
 
     show_system_information
 
@@ -348,10 +348,10 @@ main() {
     BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
 
     # Create GOPATH
-    create_gopath
+    #create_gopath
 
     # Download and unpack
-    download_unpack "${BINARY_URL}"
+    #download_unpack "${BINARY_URL}"
     
     # Set ENV
     set_envs
