@@ -39,7 +39,6 @@ check_in_china() {
     if [ "${urlstatus}" == "" ]; then
         IN_CHINA=1
         RELEASE_URL="https://golang.google.cn/dl/"
-        GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"   
         PROJECT_URL="https://jihulab.com/jetsung/golang-install"
     fi
 }
@@ -77,7 +76,7 @@ init_arch() {
         aarch64) ARCH="arm64";; 
         *) printf "\e[1;31mArchitecture %s is not supported by this installation script\e[0m\n" $ARCH; exit 1;;
     esac
-    echo "ARCH = ${ARCH}"
+#    echo "ARCH = ${ARCH}"
 }
 
 # Get OS version
@@ -91,7 +90,7 @@ init_os() {
 #        msys*) OS='windows';;
         *) printf "\e[1;31mOS %s is not supported by this installation script\e[0m\n" $OS; exit 1;;
     esac
-    echo "OS = ${OS}"
+#    echo "OS = ${OS}"
 }
 
 # init args
@@ -122,7 +121,7 @@ init_args() {
 latest_version() {
     if [ -z "${RELEASE_TAG}" ]; then
         RELEASE_TAG="$(curl -sL --retry 5 ${RELEASE_URL} | sed -n '/toggleVisible/p' | head -n 1 | cut -d '"' -f 4)"
-        echo "Latest Version = ${RELEASE_TAG}"
+#        echo "Latest Version = ${RELEASE_TAG}"
     fi
 }
 
@@ -215,32 +214,27 @@ set_environment() {
     PROFILE="${1}"
     GOPROXY_TEXT="${DEFAULT_GOPROXY}"
 
-    SED_CMD='sed -i '
-    [ OS = 'darwin' ] && SED_CMD="${SED_CMD} \"\" "
-
     if [ -z "`grep 'export\sGOROOT' ${PROFILE}`" ];then
         echo -e "\n## GOLANG" >> "${PROFILE}"
         echo "export GOROOT=\"\$HOME/.go\"" >> "${PROFILE}"
     else
-        ${SED_CMD} "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
+        fix_sed_macos "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
     fi
 
     if [ -z "`grep 'export\sGOPATH' ${PROFILE}`" ];then
         echo "export GOPATH=\"${GO_PATH}\"" >> "${PROFILE}"
     else
-        ${SED_CMD} "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
+        fix_sed_macos "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
     fi
     
     if [ -z "`grep 'export\sGOBIN' ${PROFILE}`" ];then
         echo "export GOBIN=\"\$GOPATH/bin\"" >> ${PROFILE}
     else 
-        ${SED_CMD} "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
+        fix_sed_macos "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
     fi   
 
     if [ -z "`grep 'export\sGO111MODULE' ${PROFILE}`" ];then
-        if version_ge $RELEASE_TAG "go1.11.1"; then
-            echo "export GO111MODULE=on" >> "${PROFILE}"
-        fi
+        echo "export GO111MODULE=on" >> "${PROFILE}"
     fi       
 
     if [ -z "`grep 'export\sASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH' ${PROFILE}`" ];then
@@ -250,21 +244,30 @@ set_environment() {
     fi
 
     if [ "${IN_CHINA}" == "1" ]; then 
+        GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"   
+
         if [ -z "`grep 'export\sGOSUMDB' ${PROFILE}`" ];then
             echo "export GOSUMDB=off" >> "${PROFILE}"
         fi      
     fi
 
     if [ -z "`grep 'export\sGOPROXY' ${PROFILE}`" ];then
-        if version_ge $RELEASE_TAG "go1.13"; then
-            GOPROXY_TEXT="${GOPROXY_TEXT},direct"
-        fi
-        echo "export GOPROXY=\"${GOPROXY_TEXT}\"" >> "${PROFILE}"
-    fi  
+        echo "export GOPROXY=\"${GOPROXY_TEXT},direct\"" >> "${PROFILE}"
+    else 
+        fix_sed_macos "s@^export GOPROXY.*@export GOPROXY=\"${GOPROXY_TEXT},direct\"@" "${PROFILE}"     
+    fi 
     
     if [ -z "`grep '\$GOROOT/bin:\$GOBIN' ${PROFILE}`" ];then
         echo "export PATH=\"\$PATH:\$GOROOT/bin:\$GOBIN\"" >> "${PROFILE}"
     fi        
+}
+
+fix_sed_macos() {
+    if [ "${OS}" = "darwin" ]; then
+        sed -i "" "$@"
+    else 
+        sed -i "$@"
+    fi
 }
 
 # show copyright
