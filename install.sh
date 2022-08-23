@@ -310,13 +310,13 @@ show_help_message() {
 printf "
 Go install
 
-Usage: %s [-h] [-v version] [-d gopath]
+Usage: %s [-h] [-v version] [-d GOPATH]
 
 Options:
   -h            : this help
   -v            : set go version (default: latest version)
-  -d            : set go path (default: %s/go)
-\n" "${SCRIPT_NAME}" "${HOME}"
+  -d            : set GOPATH (default: \$HOME/go)
+\n" "${SCRIPT_NAME}"
 exit 1
 }
 
@@ -340,7 +340,7 @@ main() {
 
     latest_version
 
-    #compare_version
+    compare_version
 
     show_system_information
 
@@ -348,10 +348,10 @@ main() {
     BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
 
     # Create GOPATH
-    #create_gopath
+    create_gopath
 
     # Download and unpack
-    #download_unpack "${BINARY_URL}"
+    download_unpack "${BINARY_URL}"
     
     # Set ENV
     set_envs

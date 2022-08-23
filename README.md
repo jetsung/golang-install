@@ -9,8 +9,8 @@ The latest version of the golang is installed.
 English | [简体中文](./README_CN.md)
 
 #### Notice
-- GOROOT: `~/.go`
-- By default, the latest version of **go version** is installed, and the **GOPATH** directory is ```~/go```
+- GOROOT: `$HOME/.go`
+- By default, the latest version of **go version** is installed, and the **GOPATH** directory is ```$HOME/go```
 
 ## Installation
 ### Online
@@ -60,7 +60,7 @@ Usage: ./install.sh [-h] [-v version] [-d gopath]
 Options:
   -h            : this help
   -v            : set go version (default: latest version)
-  -d            : set go path (default: ~/go)
+  -d            : set go path (default: $HOME/go)
 ```
 
 ## License
