@@ -53,12 +53,12 @@ custom_version() {
 
 # create GOPATH folder
 create_gopath() {
-    if [ ! -d "${GO_PATH}" ]; then
-        if [ "${GO_PATH}" = "~/go" ]; then
-            mkdir -p ~/go
+    if [ ! -d ${GO_PATH} ]; then
+        if [ "${GO_PATH}" = "~/go" ] || [ "${GO_PATH}" = "\$HOME/go" ]; then
+            mkdir -p ${HOME}/go
             GO_PATH="\$HOME/go"
         else
-            mkdir -p "${GO_PATH}"
+            mkdir -p ${GO_PATH}
         fi
     fi
 }
