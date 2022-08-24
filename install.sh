@@ -19,10 +19,7 @@ load_vars() {
     DOWNLOAD_URL="https://dl.google.com/go/"
 
     # GOPROXY
-    DEFAULT_GOPROXY="https://proxy.golang.org"
-
-    # Set environmental for golang
-    DEFAULT_PROFILE="${HOME}/.bashrc"
+    GOPROXY_TEXT="https://proxy.golang.org"
 
     # Set GOPATH PATH
     GO_PATH="\$HOME/go"
@@ -31,6 +28,8 @@ load_vars() {
     IN_CHINA=0
 
     PROJECT_URL="https://github.com/jetsung/golang-install"
+
+    PROFILE="$(detect_profile)"
 }
 
 # check in china
@@ -40,6 +39,7 @@ check_in_china() {
         IN_CHINA=1
         RELEASE_URL="https://golang.google.cn/dl/"
         PROJECT_URL="https://jihulab.com/jetsung/golang-install"
+        GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"   
     fi
 }
 
@@ -188,49 +188,86 @@ download_file() {
 download_unpack() {
     printf "Fetching ${1} \n\n"
 
-    rm -rf ~/.go
+    rm -rf ${HOME}/.go
 
     curl -Lk --retry 3 "${1}" | gunzip | tar xf - -C /tmp
 
-    mv /tmp/go ~/.go
+    mv /tmp/go ${HOME}/.go
 }
 
-# set golang environments
-set_envs() {
-    envs="${HOME}/.bashrc ${HOME}/.zshrc"
-    for env in ${envs}; do
-        set_environment "${env}"
+# Get PROFILE
+detect_profile() {
+  if [ "${PROFILE-}" = '/dev/null' ]; then
+    # the user has specifically requested NOT to have nvm touch their profile
+    return
+  fi
+
+  if [ -n "${PROFILE}" ] && [ -f "${PROFILE}" ]; then
+    sh_echo "${PROFILE}"
+    return
+  fi
+
+  local DETECTED_PROFILE
+  DETECTED_PROFILE=''
+
+  if [ "${SHELL#*bash}" != "$SHELL" ]; then
+    if [ -f "$HOME/.bashrc" ]; then
+      DETECTED_PROFILE="$HOME/.bashrc"
+    elif [ -f "$HOME/.bash_profile" ]; then
+      DETECTED_PROFILE="$HOME/.bash_profile"
+    fi
+  elif [ "${SHELL#*zsh}" != "$SHELL" ]; then
+    if [ -f "$HOME/.zshrc" ]; then
+      DETECTED_PROFILE="$HOME/.zshrc"
+    fi
+  fi
+
+  if [ -z "$DETECTED_PROFILE" ]; then
+    for EACH_PROFILE in ".profile" ".bashrc" ".bash_profile" ".zshrc"
+    do
+      if DETECTED_PROFILE="$(try_profile "${HOME}/${EACH_PROFILE}")"; then
+        break
+      fi
     done
+  fi
+
+  if [ -n "$DETECTED_PROFILE" ]; then
+    sh_echo "$DETECTED_PROFILE"
+  fi
+}
+
+# try profile
+try_profile() {
+  if [ -z "${1-}" ] || [ ! -f "${1}" ]; then
+    return 1
+  fi
+  sh_echo "${1}"
+}
+
+# sh echo
+sh_echo() {
+  command printf %s\\n "$*" 2>/dev/null
 }
 
 # set golang environment
 set_environment() {
-    # check .zshrc on MacOS
-    if [ ! -f "${1}" ];then
-        echo -e "\n No found file: ${1}"
-        return
-	fi
-
-    PROFILE="${1}"
-    GOPROXY_TEXT="${DEFAULT_GOPROXY}"
-
     if [ -z "`grep 'export\sGOROOT' ${PROFILE}`" ];then
-        echo -e "\n## GOLANG" >> "${PROFILE}"
+        printf "\n## GOLANG\n" >> "${PROFILE}"
         echo "export GOROOT=\"\$HOME/.go\"" >> "${PROFILE}"
     else
-        fix_sed_macos "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
+        sedi "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
     fi
 
     if [ -z "`grep 'export\sGOPATH' ${PROFILE}`" ];then
         echo "export GOPATH=\"${GO_PATH}\"" >> "${PROFILE}"
     else
-        fix_sed_macos "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
+        sedi "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
     fi
     
     if [ -z "`grep 'export\sGOBIN' ${PROFILE}`" ];then
         echo "export GOBIN=\"\$GOPATH/bin\"" >> ${PROFILE}
     else 
-        fix_sed_macos "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
+        sedi "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"     
     fi   
 
     if [ -z "`grep 'export\sGO111MODULE' ${PROFILE}`" ];then
@@ -244,8 +281,6 @@ set_environment() {
     fi
 
     if [ "${IN_CHINA}" == "1" ]; then 
-        GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"   
-
         if [ -z "`grep 'export\sGOSUMDB' ${PROFILE}`" ];then
             echo "export GOSUMDB=off" >> "${PROFILE}"
         fi      
@@ -254,20 +289,12 @@ set_environment() {
     if [ -z "`grep 'export\sGOPROXY' ${PROFILE}`" ];then
         echo "export GOPROXY=\"${GOPROXY_TEXT},direct\"" >> "${PROFILE}"
     else 
-        fix_sed_macos "s@^export GOPROXY.*@export GOPROXY=\"${GOPROXY_TEXT},direct\"@" "${PROFILE}"     
+        sedi "s@^export GOPROXY.*@export GOPROXY=\"${GOPROXY_TEXT},direct\"@" "${PROFILE}"     
     fi 
     
     if [ -z "`grep '\$GOROOT/bin:\$GOBIN' ${PROFILE}`" ];then
         echo "export PATH=\"\$PATH:\$GOROOT/bin:\$GOBIN\"" >> "${PROFILE}"
     fi        
-}
-
-fix_sed_macos() {
-    if [ "${OS}" = "darwin" ]; then
-        sed -i "" "$@"
-    else 
-        sed -i "$@"
-    fi
 }
 
 # show copyright
@@ -323,7 +350,6 @@ exit 1
 main() {
     load_vars "$@"
 
-    # identify platform based on uname output
     init_args "$@"
 
     check_in_china
@@ -354,7 +380,7 @@ main() {
     download_unpack "${BINARY_URL}"
     
     # Set ENV
-    set_envs
+    set_environment
     
     show_success_message
 }
