@@ -249,6 +249,15 @@ sh_echo() {
   command printf %s\\n "$*" 2>/dev/null
 }
 
+# fix macos
+sedi() {
+    if [ "${OS}" = "darwin" ]; then
+        sed -i "" "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
 # set golang environment
 set_environment() {
     if [ -z "`grep 'export\sGOROOT' ${PROFILE}`" ];then
