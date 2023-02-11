@@ -212,23 +212,20 @@ Golang Version Manager
             
     \e[1;32m-i, --install\e[m
                 Install Golang Version Manager
+            
+    \e[1;32m-u, --upgrade\e[m
+                Upgrade Golang Version Manager
 
     \e[1;32m-v, --version\e[m
                 Print Gvm version information
 
 \e[1;33mSUBCOMMANDS:\e[m
-  \e[1;32mcurrent\e[m    
-                Print the current go version
-  \e[1;32minstall\e[m    
-                Install a new go version  
-  \e[1;32mlist\e[m       
-                List all locally installed go versions
-  \e[1;32mlist-remote\e[m
-                List all remote go versions <more>
-  \e[1;32muninstall\e[m        
-                Uninstall a Go version                
-  \e[1;32muse\e[m        
-                Change Go version
+  \e[1;32mcurrent\e[m       Print the current go version
+  \e[1;32minstall\e[m       Install a new go version  
+  \e[1;32mlist\e[m          List all locally installed go versions
+  \e[1;32mlist-remote\e[m   List all remote go versions <more>
+  \e[1;32muninstall\e[m     Uninstall a Go version                
+  \e[1;32muse\e[m           Change Go version
 \n" "${GVM_VERSION}" "${SCRIPT_NAME##*/}"
     exit 1
 }

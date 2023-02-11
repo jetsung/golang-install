@@ -2,8 +2,6 @@
 
 ---
 
----
-
 # Golang Version Manager
 
 ```bash
