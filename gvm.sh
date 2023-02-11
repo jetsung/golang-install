@@ -352,7 +352,9 @@ use_go() {
         sedi "s@^export GOROOT.*@export GOROOT=\"${GVM_GO_ROOT}\"@" "${PROFILE}"
 
         # sedi "s@^export GOROOT.*@export GOROOT=\"${GO_VERSIONS_PATH}/go${GO_VERSION}\"@" "${PROFILE}"
-        printf "\nYou need to execute: \n\e[1;33msource %s\e[m\n" "${PROFILE}"
+        if [[ $(go version | awk '{print $3}') != "go${GO_VERSION}" ]]; then
+            printf "\nYou need to execute: \n\e[1;33msource %s\e[m\n" "${PROFILE}"
+        fi
     fi
 }
 
@@ -370,13 +372,25 @@ uninstall_go() {
 
 install_go() {
     go_list
-
     for _V in "${GO_VERSION_LIST[@]}"; do
         if [[ "${_V}" == "${GO_VERSION}" ]]; then
             printf "\e[1;31mGo %s already exists\e[m\n" "${GO_VERSION}"
             exit
         fi
     done
+
+    go_list_remote
+    for _V in "${REMOTE_GO_LIST[@]}"; do
+        if [[ "${_V}" == "go${GO_VERSION}" ]]; then
+            REMOTE_HAS_VERSION=1
+            break
+        fi
+    done
+
+    if [[ -z "${REMOTE_HAS_VERSION}" ]]; then
+        printf "\e[1;31mThere is no such version(go%s)\e[m\n" "${GO_VERSION}"
+        exit
+    fi
 
     printf "\e[1;33mInstalling go %s\e[m\n" "${GO_VERSION}"
 
@@ -387,12 +401,13 @@ install_go() {
     ${SHELL} ${GO_INSTALL_SCRIPT} ${PARAMS} >"${HOME}/.gvm.log" 2>&1
     # shellcheck disable=SC1090,SC2086
     CURRENT_GO_BINARY="${GO_VERSIONS_PATH}/go${GO_VERSION}/bin/go"
+    OLD_GOROOT="${GOROOT}"
     if [[ -f "${CURRENT_GO_BINARY}" ]]; then
         ${CURRENT_GO_BINARY} version
-        sedi "s@^export GOROOT.*@export GOROOT=\"${GVM_GO_ROOT}\"@" "${PROFILE}"
     else
         printf "\e[1;31mGo %s installation failed\e[m\n" "${GO_VERSION}"
     fi
+    sedi "s@^export GOROOT.*@export GOROOT=\"${OLD_GOROOT}\"@" "${PROFILE}"
 }
 
 main() {
