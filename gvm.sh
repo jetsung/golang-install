@@ -255,20 +255,15 @@ dl_goinstall_script() {
 gvm_script() {
     [[ -d "${GVM_BIN_PATH}" ]] || mkdir -p "${GVM_BIN_PATH}"
 
-    DIR_PATH=$(dirname "$0")
-    SCRIPT_PATH=$(
-        cd "${DIR_PATH}" || exit
-        pwd
-    )
-
-    if [[ "${GVM_BIN_PATH}" == "${SCRIPT_PATH}" ]]; then
-        printf "\e[1;31mGVM(%s) is the same file\e[m\n" "${SCRIPT_NAME}"
-        exit
-    fi
-
+    CURRENT_GVM_PATH="$(pwd)/gvm.sh"
     local GVM_SCRIPT_PATH="${GVM_BIN_PATH}/gvm.sh"
-    if [[ -f "${SCRIPT_NAME}" ]]; then
-        cp "${SCRIPT_NAME}" "${GVM_BIN_PATH}"
+    if [[ -f "${CURRENT_GVM_PATH}" ]]; then
+        if [[ "${GVM_SCRIPT_PATH}" == "${SCRIPT_NAME}" ]] ||
+            [[ "${GVM_SCRIPT_PATH}" == "$(pwd)/gvm.sh" ]]; then
+            printf "\e[1;31mTarget gvm.sh(%s) is the same file\e[m\n" "${SCRIPT_NAME}"
+            exit
+        fi
+        cp "${CURRENT_GVM_PATH}" "${GVM_BIN_PATH}"
     else
         check_in_china
         [[ -z "${IN_CHINA}" ]] || PRO_URL="${PRO_CN_URL}"
