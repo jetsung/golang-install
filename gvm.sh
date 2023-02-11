@@ -7,6 +7,25 @@
 #
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
+load_vars() {
+    GVM_VERSION="1.0.2"
+
+    GVM_PATH="${HOME}/.gvm"
+    GVM_BIN_PATH="${GVM_PATH}/bin"
+    GVM_ENV_PATH="${GVM_PATH}/env"
+    GVM_GO_ROOT="${GVM_PATH}/go"
+
+    GO_INSTALL_SCRIPT="${GVM_PATH}/install.sh"
+    GO_VERSIONS_PATH="${GVM_PATH}/verions"
+
+    PRO_URL="https://raw.githubusercontent.com/jetsung/golang-install/main/"
+    PRO_CN_URL="https://jihulab.com/jetsung/golang-install/-/raw/main/"
+
+    PROFILE="$(detect_profile)"
+
+    [[ -d "${GO_VERSIONS_PATH}" ]] || mkdir -p "${GO_VERSIONS_PATH}"
+}
+
 # sh echo
 sh_echo() {
     command printf %s\\n "$*" 2>/dev/null
@@ -78,25 +97,6 @@ check_in_china() {
     if [[ -z "${urlstatus}" ]]; then
         IN_CHINA=1
     fi
-}
-
-load_vars() {
-    GVM_VERSION="1.0.1"
-
-    GVM_PATH="${HOME}/.gvm"
-    GVM_BIN_PATH="${GVM_PATH}/bin"
-    GVM_ENV_PATH="${GVM_PATH}/env"
-    GVM_GO_ROOT="${GVM_PATH}/go"
-
-    GO_INSTALL_SCRIPT="${GVM_PATH}/install.sh"
-    GO_VERSIONS_PATH="${GVM_PATH}/verions"
-
-    PRO_URL="https://raw.githubusercontent.com/jetsung/golang-install/main/"
-    PRO_CN_URL="https://jihulab.com/jetsung/golang-install/-/raw/main/"
-
-    PROFILE="$(detect_profile)"
-
-    [[ -d "${GO_VERSIONS_PATH}" ]] || mkdir -p "${GO_VERSIONS_PATH}"
 }
 
 init_vars() {
