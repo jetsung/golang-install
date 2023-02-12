@@ -120,8 +120,22 @@ init_vars() {
 
 set_environment() {
     tee "${GVM_ENV_PATH}" >/dev/null 2>&1 <<-EOF
+#!/usr/bin/env bash
+
 export GVMPATH="\$HOME/.gvm"
 export PATH="\$PATH:\$GVMPATH/bin"
+
+__MY_PATHS=""
+# Remove duplicate paths and remove go is not gvm version
+# export PATH=\$(echo \$PATH | sed 's/:/\n/g' | sort | uniq | tr -s '\n' ':' | sed 's/:\$//g')
+while IFS=\$'\n' read -r -d ' ' _V; do
+  if command -v "\${_V}/go" >/dev/null 2>&1 && [[ -f "\${_V}/go" ]]; then
+    [[ "\${_V}" == "\${GVMPATH}/go/bin" ]] || continue
+  fi
+  __MY_PATHS="\${__MY_PATHS}:\${_V}"
+done < <(echo "\${PATH}" | sed 's/:/\n/g' | sort | uniq | tr -s '\n' ' ')
+
+[[ -z "\${__MY_PATHS}" ]] || export PATH="\${__MY_PATHS#*:}"
 EOF
 
     if ! grep -q "\$HOME/.gvm/env" "${PROFILE}"; then
@@ -130,6 +144,9 @@ EOF
     else
         sedi "s@^. \"\$HOME/.gvm/.*@. \"\$HOME/.gvm/env\"@" "${PROFILE}"
     fi
+
+    # Remove duplicate paths
+    # export PATH=$(echo $PATH | sed 's/:/\n/g' | sort | uniq | tr -s '\n' ':' | sed 's/:$//g')
 }
 
 do_something() {
