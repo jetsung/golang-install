@@ -301,8 +301,11 @@ upgrade_script() {
 
 go_list() {
     if ! find "${GO_VERSIONS_PATH}"/go*/bin/go -maxdepth 3 -type f -print0 >/dev/null 2>&1; then
-        printf "\e[1;31mNo go version list found\e[m\n"
-        exit
+        if [[ -z "${1}" ]]; then
+            printf "\e[1;31mNo go version list found\e[m\n"
+            exit
+        fi
+        return
     fi
 
     # GO_VERSION_LIST=$(find "${GO_VERSIONS_PATH}" -maxdepth 1 -name "go*" -type d | cut -d '/' -f 6 | sed 's/..//')
@@ -324,7 +327,7 @@ go_list_remote() {
 }
 
 show_list() {
-    go_list
+    go_list ""
 
     for _V in "${GO_VERSION_LIST[@]}"; do
         printf "go%s\n" "${_V}"
@@ -364,7 +367,7 @@ use_go() {
         sedi "s@^export GOROOT.*@export GOROOT=\"${GVM_GO_ROOT}\"@" "${PROFILE}"
 
         # sedi "s@^export GOROOT.*@export GOROOT=\"${GO_VERSIONS_PATH}/go${GO_VERSION}\"@" "${PROFILE}"
-        if [[ $(go version | awk '{print $3}') != "go${GO_VERSION}" ]]; then
+        if ! command -v go >/dev/null 2>&1 || [[ $(go version | awk '{print $3}') != "go${GO_VERSION}" ]]; then
             printf "\nYou need to execute: \n\e[1;33msource %s\e[m\n" "${PROFILE}"
         fi
     fi
@@ -383,7 +386,7 @@ uninstall_go() {
 }
 
 install_go() {
-    go_list
+    go_list "install"
     for _V in "${GO_VERSION_LIST[@]}"; do
         if [[ "${_V}" == "${GO_VERSION}" ]]; then
             printf "\e[1;31mGo %s already exists\e[m\n" "${GO_VERSION}"
@@ -433,4 +436,4 @@ main() {
     do_something
 }
 
-main "$@" || exit 1
+main "$@"
