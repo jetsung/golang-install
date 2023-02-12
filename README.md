@@ -1,13 +1,25 @@
 # Golang Install
 
+- Support **Linux / MacOS / FreeBSD**
+
+English | [简体中文](./README_CN.md)
+
 ---
 
 # Golang Version Manager
 
+## Install
+
+```bash
+curl -fsL https://github.com/jetsung/golang-install/raw/main/gvm.sh | bash -s -- -i
+```
+
+## Help
+
 ```bash
 # ./gvm.sh -h
 
-gvm 1.0.2
+gvm 1.0.3
 Golang Version Manager
 
 USAGE:
@@ -27,23 +39,22 @@ OPTIONS:
                 Print Gvm version information
 
 SUBCOMMANDS:
-  current       Print the current go version
-  install       Install a new go version
-  list          List all locally installed go versions
-  list-remote   List all remote go versions <more>
-  uninstall     Uninstall a Go version
-  use           Change Go version
+  current               Print the current go version
+  install [version]     Install a new go version
+  list                  List all locally installed go versions
+  list-remote <more>    List all remote go versions
+  uninstall             Uninstall a Go version
+  use [version]         Change Go version
 ```
+
+# Golang Install `[install.sh]`
 
 The latest version of the golang is installed.
 
-- Support **Linux / MacOS / FreeBSD**
 - Support custom **version**
 - Support custom **GOPATH**
 
-English | [简体中文](./README_CN.md)
-
-#### Notice
+**Notice**
 
 - GOROOT: `$HOME/.go`
 - By default, the latest version of **go version** is installed, and the **GOPATH** directory is `$HOME/go`

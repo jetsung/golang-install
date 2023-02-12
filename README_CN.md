@@ -1,13 +1,25 @@
 # Go 语言安装
 
+- 支持 **Linux / MacOS / FreeBSD** 等系统
+
+[English](./README.md) | 简体中文
+
 ---
 
-# Golang Version Manager
+# Golang Version Manager `[gvm.sh]`
+
+## 安装
+
+```bash
+curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/gvm.sh | bash -s -- -i
+```
+
+## 帮助
 
 ```bash
 # ./gvm.sh -h
 
-gvm 1.0.2
+gvm 1.0.3
 Golang Version Manager
 
 USAGE:
@@ -27,23 +39,22 @@ OPTIONS:
                 Print Gvm version information
 
 SUBCOMMANDS:
-  current       Print the current go version
-  install       Install a new go version
-  list          List all locally installed go versions
-  list-remote   List all remote go versions <more>
-  uninstall     Uninstall a Go version
-  use           Change Go version
+  current               Print the current go version
+  install [version]     Install a new go version
+  list                  List all locally installed go versions
+  list-remote <more>    List all remote go versions
+  uninstall             Uninstall a Go version
+  use [version]         Change Go version
 ```
+
+# Go 语言安装 `[install.sh]`
 
 最新版 Go 语言一键安装脚本。
 
-- 支持 **Linux / MacOS / FreeBSD** 等系统
 - 支持自定义**版本**
 - 支持自定义**GOPATH**
 
-[English](./README.md) | 简体中文
-
-#### 注意
+**注意**
 
 - GOROOT: `$HOME/.go`
 - 默认安装最新版本的 **go version**, **GOPATH** 目录为 `$HOME/go`

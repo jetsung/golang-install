@@ -8,7 +8,7 @@
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
 load_vars() {
-    GVM_VERSION="1.0.2"
+    GVM_VERSION="1.0.3"
 
     GVM_PATH="${HOME}/.gvm"
     GVM_BIN_PATH="${GVM_PATH}/bin"
@@ -134,7 +134,7 @@ EOF
 
 do_something() {
     case "${COMMAND}" in
-    -h | --help)
+    -h | --help | "")
         show_help_message
         ;;
 
@@ -152,13 +152,17 @@ do_something() {
         ;;
 
     current)
-        go version
+        if ! command -v go >/dev/null 2>&1; then
+            printf "\e[1;31mGo is not installed\e[0m\n"
+        else
+            go version
+        fi
         exit
         ;;
 
     install)
         if [[ -z "${OPTIONS}" ]]; then
-            printf "miss go version\n"
+            printf "\e[1;31mCan't find go version\e[m\n"
             exit
         fi
         GO_VERSION="${OPTIONS}"
@@ -178,7 +182,7 @@ do_something() {
 
     uninstall)
         if [[ -z "${OPTIONS}" ]]; then
-            printf "miss go version\n"
+            printf "\e[1;31mCan't find go version\e[m\n"
             exit
         fi
         GO_VERSION="${OPTIONS}"
@@ -188,13 +192,19 @@ do_something() {
 
     use)
         if [[ -z "${OPTIONS}" ]]; then
-            printf "miss go version\n"
+            printf "\e[1;31mCan't find go version\e[m\n"
             exit
         fi
         GO_VERSION="${OPTIONS}"
         use_go
         exit
         ;;
+
+    *)
+        printf "\e[1;31mUnknown argument: %s\e[m\n" "${COMMAND}"
+        exit
+        ;;
+
     esac
 }
 
@@ -220,12 +230,12 @@ Golang Version Manager
                 Print Gvm version information
 
 \e[1;33mSUBCOMMANDS:\e[m
-  \e[1;32mcurrent\e[m       Print the current go version
-  \e[1;32minstall\e[m       Install a new go version  
-  \e[1;32mlist\e[m          List all locally installed go versions
-  \e[1;32mlist-remote\e[m   List all remote go versions <more>
-  \e[1;32muninstall\e[m     Uninstall a Go version                
-  \e[1;32muse\e[m           Change Go version
+  \e[1;32mcurrent\e[m               Print the current go version
+  \e[1;32minstall\e[m [version]     Install a new go version  
+  \e[1;32mlist\e[m                  List all locally installed go versions
+  \e[1;32mlist-remote\e[m <more>    List all remote go versions
+  \e[1;32muninstall\e[m             Uninstall a Go version                
+  \e[1;32muse\e[m [version]         Change Go version
 \n" "${GVM_VERSION}" "${SCRIPT_NAME##*/}"
     exit 1
 }
@@ -290,6 +300,11 @@ upgrade_script() {
 }
 
 go_list() {
+    if ! find "${GO_VERSIONS_PATH}"/go*/bin/go -maxdepth 3 -type f -print0 >/dev/null 2>&1; then
+        printf "\e[1;31mNo go version list found\e[m\n"
+        exit
+    fi
+
     # GO_VERSION_LIST=$(find "${GO_VERSIONS_PATH}" -maxdepth 1 -name "go*" -type d | cut -d '/' -f 6 | sed 's/..//')
     while IFS= read -r -d '' _V; do
         GO_VERSION_LIST[${#GO_VERSION_LIST[@]}]=$(${_V} version | awk '{print $3}' | sed 's/..//')
