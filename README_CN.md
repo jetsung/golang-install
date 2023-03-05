@@ -1,12 +1,15 @@
-# Go 语言安装
+# Go 语言
 
 - 支持 **Linux / MacOS / FreeBSD** 等系统
 
 [English](./README.md) | 简体中文
 
+- **Golang Version Manager:** [gvm.sh](#go-语言版本管理)
+- **Golang Install:** [install.sh](#go-语言安装)
+
 ---
 
-# Golang Version Manager `[gvm.sh]`
+# Go 语言版本管理
 
 ## 安装
 
@@ -17,6 +20,11 @@ curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/gvm.sh | bash -s
 git clone https://jihulab.com/jetsung/golang-install.git
 cd golang-install
 ./gvm.sh -i
+
+# source $HOME/.zshrc
+# source $HOME/.bashrc
+
+gvm version
 ```
 
 ## 帮助
@@ -52,7 +60,7 @@ SUBCOMMANDS:
   use [version]         Change Go version
 ```
 
-# Go 语言安装 `[install.sh]`
+# Go 语言安装
 
 最新版 Go 语言一键安装脚本。
 

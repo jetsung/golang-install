@@ -458,7 +458,7 @@ uninstall_go() {
 # Use custom go version
 use_go() {
     CURRENT_GO_BINARY="${GO_VERSIONS_PATH}/go${GO_VERSION}/bin/go"
-    if [[ ! -f "${CURRENT_GO_BINARY}" ]]; then
+    if [ ! -f "$CURRENT_GO_BINARY" ]; then
         install_go
     else
         $CURRENT_GO_BINARY version

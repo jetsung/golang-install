@@ -1,12 +1,15 @@
-# Golang Install
+# Golang
 
 - Support **Linux / MacOS / FreeBSD**
 
 English | [简体中文](./README_CN.md)
 
+- **Golang Version Manager:** [gvm.sh](#golang-version-manager)
+- **Golang Install:** [install.sh](#golang-install)
+
 ---
 
-# Golang Version Manager `[gvm.sh]`
+# Golang Version Manager
 
 ## Install
 
@@ -17,6 +20,11 @@ curl -fsL https://github.com/jetsung/golang-install/raw/main/gvm.sh | bash -s --
 git clone https://github.com/jetsung/golang-install.git
 cd golang-install
 ./gvm.sh -i
+
+# source $HOME/.zshrc
+# source $HOME/.bashrc
+
+gvm version
 ```
 
 ## Help
@@ -52,7 +60,7 @@ SUBCOMMANDS:
   use [version]         Change Go version
 ```
 
-# Golang Install `[install.sh]`
+# Golang Install
 
 The latest version of the golang is installed.
 
