@@ -7,218 +7,54 @@
 #
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
-# load var
-load_vars() {
-    # Script file name
-    SCRIPT_NAME=$0
+set -e
+set -u
+set -o pipefail
 
-    # Release link
-    RELEASE_URL="https://go.dev/dl/"
+exec 3>&1
 
-    # Downlaod link
-    DOWNLOAD_URL="https://dl.google.com/go/"
+script_name=$(basename "$0")
 
-    # GOPROXY
-    GOPROXY_TEXT="https://proxy.golang.org"
-
-    # Set GOPATH PATH
-    GO_PATH="\$HOME/go"
-
-    # Is GWF
-    IN_CHINA=0
-
-    PROJECT_URL="https://github.com/jetsung/golang-install"
-
-    PROFILE="$(detect_profile)"
-}
-
-# check in china
-check_in_china() {
-    urlstatus=$(curl -s -m 3 -IL https://google.com | grep 200)
-    if [[ -z "${urlstatus}" ]]; then
-        IN_CHINA=1
-        RELEASE_URL="https://golang.google.cn/dl/"
-        PROJECT_URL="https://jihulab.com/jetsung/golang-install"
-        GOPROXY_TEXT="https://goproxy.cn,https://goproxy.io"
+if [ -t 1 ] && command -v tput >/dev/null; then
+    ncolors=$(tput colors || echo 0)
+    if [ -n "$ncolors" ] && [ "$ncolors" -ge 8 ]; then
+        bold="$(tput bold || echo)"
+        normal="$(tput sgr0 || echo)"
+        black="$(tput setaf 0 || echo)"
+        red="$(tput setaf 1 || echo)"
+        green="$(tput setaf 2 || echo)"
+        yellow="$(tput setaf 3 || echo)"
+        blue="$(tput setaf 4 || echo)"
+        magenta="$(tput setaf 5 || echo)"
+        cyan="$(tput setaf 6 || echo)"
+        white="$(tput setaf 7 || echo)"
     fi
+fi
+
+say_warning() {
+    printf "%b\n" "${yellow:-}${script_name}: Warning: $1${normal:-}" >&3
 }
 
-# custom version
-custom_version() {
-    if [[ -n "${1}" ]]; then
-        RELEASE_TAG="go${1}"
-        echo "Custom Version = ${RELEASE_TAG}"
+say_err() {
+    printf "%b\n" "${red:-}${script_name}: Error: $1${normal:-}" >&2
+    exit 1
+}
+
+say() {
+    printf "%b\n" "${cyan:-}${script_name}:${normal:-} $1" >&3
+}
+
+# try profile
+try_profile() {
+    if [ -z "${1-}" ] || [ ! -f "${1}" ]; then
+        return 1
     fi
+    sh_echo "${1}"
 }
 
-# create GOPATH folder
-create_gopath() {
-    if [[ ! -d "${GO_PATH}" ]]; then
-        if [[ "${GO_PATH}" == "\$HOME/go" ]]; then
-            mkdir -p "${HOME}"/go
-            GO_PATH="\$HOME/go"
-        else
-            mkdir -p "${GO_PATH}"
-        fi
-    fi
-}
-
-# Get OS bit
-init_arch() {
-    ARCH=$(uname -m)
-    BIT="${ARCH}"
-
-    case "${ARCH}" in
-    amd64) ARCH="amd64" ;;
-    x86_64) ARCH="amd64" ;;
-    i386) ARCH="386" ;;
-    armv6l) ARCH="armv6l" ;;
-    armv7l) ARCH="armv6l" ;;
-    aarch64) ARCH="arm64" ;;
-    *)
-        printf "\e[1;31mArchitecture %s is not supported by this installation script\e[0m\n" "${ARCH}"
-        exit 1
-        ;;
-    esac
-    #    echo "ARCH = ${ARCH}"
-}
-
-# Get OS version
-init_os() {
-    OS=$(uname | tr '[:upper:]' '[:lower:]')
-    case "${OS}" in
-    darwin) OS='darwin' ;;
-    linux) OS='linux' ;;
-    freebsd) OS='freebsd' ;;
-        #        mingw*) OS='windows';;
-        #        msys*) OS='windows';;
-    *)
-        printf "\e[1;31mOS %s is not supported by this installation script\e[0m\n" "${OS}"
-        exit 1
-        ;;
-    esac
-    #    echo "OS = ${OS}"
-}
-
-# init args
-init_args() {
-    KEY=""
-    for ARG in "$@"; do
-        if [[ "-h" == "${ARG}" ]]; then
-            show_help_message
-        fi
-
-        if [[ -z "${KEY}" ]]; then
-            KEY="${ARG}"
-        else
-            case "${KEY}" in
-            "-v")
-                custom_version "$ARG"
-                ;;
-            "-d")
-                GO_PATH="${ARG}"
-                ;;
-            "-c")
-                GO_CUSTOM_PATH="${ARG}"
-                ;;
-            esac
-            KEY=""
-        fi
-    done
-}
-
-# if RELEASE_TAG was not provided, assume latest
-latest_version() {
-    if [[ -z "${RELEASE_TAG}" ]]; then
-        RELEASE_TAG="$(curl -sL --retry 5 "${RELEASE_URL}" | sed -n '/toggleVisible/p' | head -n 1 | cut -d '"' -f 4)"
-        #        echo "Latest Version = ${RELEASE_TAG}"
-    fi
-}
-
-# compare version
-compare_version() {
-    OLD_VERSION="none"
-    NEW_VERSION="${RELEASE_TAG}"
-    # if test -x "$(command -v go)"; then
-    #     OLD_VERSION="$(go version | awk '{print $3}')"
-    # fi
-    if [[ -z "${GO_CUSTOM_PATH}" ]]; then
-        if [[ -f "${HOME}/.go/bin/go" ]]; then
-            OLD_VERSION="$("${HOME}"/.go/bin/go version | awk '{print $3}')"
-        fi
-    else
-        if [[ -f "${GO_CUSTOM_PATH}/.go/bin/go" ]]; then
-            OLD_VERSION="$("${GO_CUSTOM_PATH}"/.go/bin/go version | awk '{print $3}')"
-        fi
-    fi
-    if [[ "${OLD_VERSION}" == "${NEW_VERSION}" ]]; then
-        printf "\n\e[1;31mYou have installed this version: %s\e[0m\n" "${OLD_VERSION}"
-        exit 1
-    fi
-
-    printf "
-Current version: \e[1;33m %s \e[0m 
-Target version: \e[1;33m %s \e[0m
-" "$OLD_VERSION" "$NEW_VERSION"
-}
-
-# compare version size
-version_ge() { [[ "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1" ]]; }
-
-# install curl command
-install_curl_command() {
-    if ! test -x "$(command -v curl)"; then
-        if test -x "$(command -v yum)"; then
-            yum install -y curl
-        elif test -x "$(command -v apt)"; then
-            apt install -y curl
-        else
-            printf "\e[1;31mYou must pre-install the curl tool\e[0m\n"
-            exit 1
-        fi
-    fi
-}
-
-# Download go file
-## unused
-download_file() {
-    URL="${1}"
-    destination="${2}"
-
-    printf "Fetching %s \n\n" "${URL}"
-
-    if test -x "$(command -v curl)"; then
-        code=$(curl --connect-timeout 15 -w '%{http_code}' -L "${URL}" -o "${destination}")
-    elif test -x "$(command -v wget)"; then
-        code=$(wget -t2 -T15 -O "${destination}" --server-response "${URL}" 2>&1 | awk '/^  HTTP/{print $2}' | tail -1)
-    else
-        printf "\e[1;31mNeither curl nor wget was available to perform http requests.\e[0m\n"
-        exit 1
-    fi
-
-    if [ "${code}" != 200 ]; then
-        printf "\e[1;31mRequest failed with code %s\e[0m\n" "$code"
-        exit 1
-    else
-        printf "\n\e[1;33mDownload succeeded\e[0m\n"
-    fi
-}
-
-# Download file and unpack
-download_unpack() {
-    printf "Fetching %s \n\n" "${1}"
-
-    if [[ -z "${GO_CUSTOM_PATH}" ]]; then
-        rm -rf "${HOME}"/.go
-        curl -Lk --retry 3 "${1}" | gunzip | tar xf - -C /tmp
-        mv /tmp/go "${HOME}"/.go
-    else
-        rm -rf "${GO_CUSTOM_PATH}"
-        PARENT_PATH=$(dirname "${GO_CUSTOM_PATH}")
-        [[ -d "${PARENT_PATH}" ]] || mkdir -p "${PARENT_PATH}"
-        curl -Lk --retry 3 "${1}" | gunzip | tar xf - -C /tmp
-        mv /tmp/go "${GO_CUSTOM_PATH}"
-    fi
+# sh echo
+sh_echo() {
+    command printf %s\\n "$*" 2>/dev/null
 }
 
 # Get PROFILE
@@ -261,19 +97,6 @@ detect_profile() {
     fi
 }
 
-# try profile
-try_profile() {
-    if [ -z "${1-}" ] || [ ! -f "${1}" ]; then
-        return 1
-    fi
-    sh_echo "${1}"
-}
-
-# sh echo
-sh_echo() {
-    command printf %s\\n "$*" 2>/dev/null
-}
-
 # fix macos
 sedi() {
     if [ "${OS}" = "darwin" ]; then
@@ -283,55 +106,189 @@ sedi() {
     fi
 }
 
+# show help message
+show_help_message() {
+    printf "Go install
+
+\e[1;33mUSAGE:\e[m
+    \e[1;32m%s\e[m [OPTIONS] <SUBCOMMANDS>
+
+\e[1;33mOPTIONS:\e[m
+    \e[1;32m-h, --help\e[m
+                Print help information.
+
+    \e[1;32m-p, --path\e[m
+                Set GOPATH. (default: \$HOME/go)  
+
+    \e[1;32m-r, --root\e[m
+                Set GOROOT. (default: \$HOME/.go)                 
+
+    \e[1;32m-v, --version\e[m
+                Set golang version.                  
+\n" "${script_name##*/}"
+    exit
+}
+
+# custom version
+custom_version() {
+    if [ -n "${1}" ]; then
+        RELEASE_TAG="go${1}"
+    fi
+}
+
+# check in china
+check_in_china() {
+    if ! curl -s -m 3 -IL https://google.com | grep -q "200 OK"; then
+        IN_CHINA=1
+    fi
+}
+
+# Get OS bit
+init_arch() {
+    ARCH=$(uname -m)
+    BIT="${ARCH}"
+    case "${ARCH}" in
+    amd64) ARCH="amd64" ;;
+    x86_64) ARCH="amd64" ;;
+    i386) ARCH="386" ;;
+    armv6l) ARCH="armv6l" ;;
+    armv7l) ARCH="armv6l" ;;
+    aarch64) ARCH="arm64" ;;
+    *)
+        say_err "Architecture $ARCH is not supported by this installation script\n"
+        ;;
+    esac
+}
+
+# Get OS version
+init_os() {
+    OS=$(uname | tr '[:upper:]' '[:lower:]')
+    case "${OS}" in
+    darwin) OS='darwin' ;;
+    linux) OS='linux' ;;
+    freebsd) OS='freebsd' ;;
+        #        mingw*) OS='windows';;
+        #        msys*) OS='windows';;
+    *)
+        say_err "OS $OS is not supported by this installation script\n"
+        ;;
+    esac
+}
+
+# install curl command
+install_curl_command() {
+    if ! test -x "$(command -v curl)"; then
+        if test -x "$(command -v yum)"; then
+            yum install -y curl
+        elif test -x "$(command -v apt)"; then
+            apt install -y curl
+        else
+            say_err "You must pre-install the curl tool\n"
+        fi
+    fi
+}
+
+# if RELEASE_TAG was not provided, assume latest
+latest_version() {
+    if [ -z "$RELEASE_TAG" ]; then
+        RELEASE_TAG="$(curl -sL --retry 5 --max-time 10 "${RELEASE_URL}" | sed -n '/toggleVisible/p' | head -n 1 | cut -d '"' -f 4)"
+    fi
+}
+
+# compare version
+compare_version() {
+    OLD_VERSION="none"
+    NEW_VERSION="${RELEASE_TAG}"
+
+    if [ -z "$__GOROOT" ]; then
+        if [ -f "${HOME}/.go/bin/go" ]; then
+            OLD_VERSION="$("${HOME}"/.go/bin/go version | awk '{print $3}')"
+        fi
+    else
+        if [ -f "$__GOROOT/.go/bin/go" ]; then
+            OLD_VERSION="$("$__GOROOT"/.go/bin/go version | awk '{print $3}')"
+        fi
+    fi
+
+    # DELETE current go
+    # if [[ "$OLD_VERSION"="none" ]]; then
+    #     __CURRENT_GO=$(which go)
+    # fi
+
+    if [ "${OLD_VERSION}" = "${NEW_VERSION}" ]; then
+        say_err "You have installed this version: ${OLD_VERSION}"
+    fi
+
+    printf "
+Current version: \e[1;33m %s \e[0m 
+Target  version: \e[1;33m %s \e[0m
+" "$OLD_VERSION" "$NEW_VERSION"
+}
+
+# create folder
+create_folder() {
+    if [ -n "${1}" ]; then
+        local MYPATH="${1}"
+        local REAL_PATH=${MYPATH/\$HOME/$HOME}
+        [ -d "$REAL_PATH" ] || mkdir "$REAL_PATH"
+        __TMP_PATH="$REAL_PATH"
+    fi
+}
+
+# Download file and unpack
+download_unpack() {
+    local downurl="$1"
+    printf "Fetching %s \n\n" "$downurl"
+
+    __TMP_PATH=""
+    create_folder "$__GOROOT"
+    REAL_PATH="$__TMP_PATH"
+
+    curl -Lk --retry 3 --max-time 30 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$REAL_PATH"
+}
+
+# compare version size
+version_ge() { [[ "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1" ]]; }
+
 # set golang environment
 set_environment() {
-    if ! grep -q 'export\sGOROOT' "${PROFILE}"; then
-        printf "\n## GOLANG\n" >>"${PROFILE}"
-        echo "export GOROOT=\"\$HOME/.go\"" >>"${PROFILE}"
+    if ! grep -q 'export\sGOROOT' "$PROFILE"; then
+        printf "\n## GOLANG\n" >>"$PROFILE"
+        echo "export GOROOT=\"$__GOROOT\"" >>"$PROFILE"
     else
-        sedi "s@^export GOROOT.*@export GOROOT=\"\$HOME/.go\"@" "${PROFILE}"
+        sedi "s@^export GOROOT.*@export GOROOT=\"$__GOROOT\"@" "$PROFILE"
     fi
 
-    if ! grep -q 'export\sGOPATH' "${PROFILE}"; then
-        echo "export GOPATH=\"${GO_PATH}\"" >>"${PROFILE}"
+    if ! grep -q 'export\sGOPATH' "$PROFILE"; then
+        echo "export GOPATH=\"$__GOPATH\"" >>"${PROFILE}"
     else
-        sedi "s@^export GOPATH.*@export GOPATH=\"${GO_PATH}\"@" "${PROFILE}"
+        sedi "s@^export GOPATH.*@export GOPATH=\"$__GOPATH\"@" "$PROFILE"
     fi
 
-    if ! grep -q 'export\sGOBIN' "${PROFILE}"; then
-        echo "export GOBIN=\"\$GOPATH/bin\"" >>"${PROFILE}"
+    if ! grep -q 'export\sGOBIN' "$PROFILE"; then
+        echo "export GOBIN=\"\$GOPATH/bin\"" >>"$PROFILE"
     else
-        sedi "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "${PROFILE}"
+        sedi "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "$PROFILE"
     fi
 
-    if ! grep -q 'export\sGO111MODULE' "${PROFILE}"; then
-        echo "export GO111MODULE=on" >>"${PROFILE}"
+    if ! grep -q 'export\sGO111MODULE' "$PROFILE"; then
+        echo "export GO111MODULE=on" >>"$PROFILE"
     fi
 
-    if ! grep -q 'export\sASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH' "${PROFILE}"; then
-        if version_ge "${RELEASE_TAG}" "go1.17"; then
-            echo "export ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.18" >>"${PROFILE}"
+    if ! grep -q 'export\sASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH' "$PROFILE"; then
+        if version_ge "$RELEASE_TAG" "go1.17"; then
+            echo "export ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.18" >>"$PROFILE"
         fi
     fi
 
-    if [[ -n "${IN_CHINA}" ]]; then
-        if ! grep -q 'export\sGOSUMDB' "${PROFILE}"; then
-            echo "export GOSUMDB=off" >>"${PROFILE}"
-        fi
-    fi
-
-    if ! grep -q 'export\sGOPROXY' "${PROFILE}"; then
-        echo "export GOPROXY=\"${GOPROXY_TEXT},direct\"" >>"${PROFILE}"
+    if ! grep -q 'export\sGOPROXY' "$PROFILE"; then
+        echo "export GOPROXY=\"$__GOPROXY_URL,direct\"" >>"$PROFILE"
     else
-        sedi "s@^export GOPROXY.*@export GOPROXY=\"${GOPROXY_TEXT},direct\"@" "${PROFILE}"
+        sedi "s@^export GOPROXY.*@export GOPROXY=\"$__GOPROXY_URL,direct\"@" "$PROFILE"
     fi
 
-    if ! grep -q "\$GOROOT/bin:\$GOBIN" "${PROFILE}"; then
-        echo "export PATH=\"\$PATH:\$GOROOT/bin:\$GOBIN\"" >>"${PROFILE}"
-    fi
-
-    if [[ -n "${GO_CUSTOM_PATH}" ]]; then
-        sedi "s@^export GOROOT.*@export GOROOT=\"${GO_CUSTOM_PATH}\"@" "${PROFILE}"
+    if ! grep -q "\$GOROOT/bin:\$GOBIN" "$PROFILE"; then
+        echo "export PATH=\"\$PATH:\$GOROOT/bin:\$GOBIN\"" >>"$PROFILE"
     fi
 }
 
@@ -347,18 +304,18 @@ show_copyright() {
 ###  Link:    https://jetsung.com
 ###  Project: %s
 ###############################################################
-\n" "${PROJECT_URL}"
+\n" "$PROJECT_URL"
 }
 
 # show system information
 show_system_information() {
     printf "
 ###############################################################
-###  System: %s 
-###  Bit: %s 
+###  System:  %s 
+###  Bit:     %s 
 ###  Version: %s 
 ###############################################################
-\n" "${OS}" "${BIT}" "${RELEASE_TAG}"
+\n" "$OS" "$BIT" "$RELEASE_TAG"
 }
 
 # Show success message
@@ -367,59 +324,100 @@ show_success_message() {
 ###############################################################
 # Install success, please execute again \e[1;33msource %s\e[0m
 ###############################################################
-\n" "${PROFILE}"
+\n" "$PROFILE"
 }
 
-# show help message
-show_help_message() {
-    printf "Go install
+# Downlaod URL
+DOWNLOAD_URL="https://dl.google.com/go/"
 
-Usage: %s [-h] [-v version] [-d GOPATH]
+# Release URL
+RELEASE_URL="https://go.dev/dl/"
+RELEASE_CN_URL="https://golang.google.cn/dl/"
 
-Options:
-  -h            : this help
-  -v            : set go version (default: latest version)
-  -d            : set GOPATH (default: \$HOME/go)
-\n" "${SCRIPT_NAME}"
-    exit 1
-}
+# GOPROXY
+__GOPROXY_URL="https://proxy.golang.org"
+__GOPROXY_CN_URL="https://goproxy.cn,https://goproxy.io"
 
-main() {
-    load_vars "$0"
+# GOPATH
+__GOPATH="\$HOME/go"
 
-    init_args "$@"
+# GOROOT
+__GOROOT="\$HOME/.go"
 
-    check_in_china
+# Project URL
+PROJECT_URL="https://github.com/jetsung/golang-install"
+PROJECT_CN_URL="https://jihulab.com/jetsung/golang-install"
 
-    show_copyright
+# Profile
+PROFILE=""
+PROFILE="$(detect_profile)"
 
-    set -e
+# Release tag
+RELEASE_TAG=""
 
-    init_arch
+for ARG in "$@"; do
+    case "${ARG}" in
+    --help | -h)
+        show_help_message
+        ;;
 
-    init_os
+    --path | -p)
+        shift
+        if [ $# -ge 1 ] && [[ "${1}" != -* ]]; then
+            __GOPATH=${1/"$HOME"/\$HOME}
+        fi
+        ;;
 
-    install_curl_command
+    --root | -r)
+        shift
+        if [ $# -ge 1 ] && [[ "${1}" != -* ]]; then
+            __GOROOT=${1/"$HOME"/\$HOME}
+        fi
+        ;;
 
-    latest_version
+    --version | -v)
+        shift
+        if [ $# -ge 1 ] && [[ "${1}" != -* ]]; then
+            custom_version "${1}"
+        fi
+        ;;
+    *)
+        shift
+        ;;
+    esac
+done
 
-    compare_version
+create_folder "$__GOPATH"
 
-    show_system_information
+IN_CHINA=""
+check_in_china
+if [ -n "$IN_CHINA" ]; then
+    RELEASE_URL="${RELEASE_CN_URL}"
+    PROJECT_URL="${PROJECT_CN_URL}"
+    __GOPROXY_URL="${__GOPROXY_CN_URL}"
+fi
 
-    # Download File
-    BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
+show_copyright
 
-    # Create GOPATH
-    create_gopath
+init_arch
 
-    # Download and unpack
-    download_unpack "${BINARY_URL}"
+init_os
 
-    # Set ENV
-    set_environment
+install_curl_command
 
-    show_success_message
-}
+latest_version
 
-main "$@" || exit 1
+compare_version
+
+show_system_information
+
+# Download File
+BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
+
+# Download and unpack
+download_unpack "$BINARY_URL"
+
+# Set ENV
+set_environment
+
+show_success_message

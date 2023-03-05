@@ -6,24 +6,29 @@ English | [简体中文](./README_CN.md)
 
 ---
 
-# Golang Version Manager
+# Golang Version Manager `[gvm.sh]`
 
 ## Install
 
 ```bash
 curl -fsL https://github.com/jetsung/golang-install/raw/main/gvm.sh | bash -s -- -i
+
+# or
+git clone https://github.com/jetsung/golang-install.git
+cd golang-install
+./gvm.sh -i
 ```
 
 ## Help
 
 ```bash
-# ./gvm.sh -h
+# gvm -h
 
-gvm 1.0.3
+gvm 1.0.4
 Golang Version Manager
 
 USAGE:
-    gvm.sh [OPTIONS] <SUBCOMMANDS>
+    gvm [OPTIONS] <SUBCOMMANDS>
 
 OPTIONS:
     -h, --help
@@ -75,7 +80,7 @@ curl -fsL https://raw.githubusercontent.com/jetsung/golang-install/main/install.
 - **MY_DIY_GO_PATH** is a custom gopath, such as： `/home/myhome/go`
 
 ```sh
-curl -fsL https://raw.githubusercontent.com/jetsung/golang-install/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -d MY_DIY_GO_PATH
+curl -fsL https://raw.githubusercontent.com/jetsung/golang-install/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -p MY_DIY_GO_PATH
 ```
 
 ### Offline
@@ -87,7 +92,7 @@ Save the script as a file name **install.sh**
 bash install.sh
 
 # customize
-bash install.sh -v 1.12.8 -d /home/myhome/go
+bash install.sh -v 1.12.8 -p /home/myhome/go
 ```
 
 When you add executable permissions, you can customize the version and gopath.
@@ -100,7 +105,7 @@ chmod +x install.sh
 ./install.sh
 
 # customize
-./install.sh -v 1.12.8 -d /home/myhome/go
+./install.sh -v 1.12.8 -p /home/myhome/go
 ```
 
 **Usage**  
@@ -109,12 +114,21 @@ chmod +x install.sh
 ```
 Go install
 
-Usage: ./install.sh [-h] [-v version] [-d gopath]
+USAGE:
+    install.sh [OPTIONS] <SUBCOMMANDS>
 
-Options:
-  -h            : this help
-  -v            : set go version (default: latest version)
-  -d            : set go path (default: $HOME/go)
+OPTIONS:
+    -h, --help
+                Print help information.
+
+    -p, --path
+                Set GOPATH. (default: $HOME/go)
+
+    -r, --root
+                Set GOROOT. (default: $HOME/.go)
+
+    -v, --version
+                Set golang version.
 ```
 
 ## License

@@ -12,18 +12,23 @@
 
 ```bash
 curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/gvm.sh | bash -s -- -i
+
+# 或者
+git clone https://github.com/jetsung/golang-install.git
+cd golang-install
+./gvm.sh -i
 ```
 
 ## 帮助
 
 ```bash
-# ./gvm.sh -h
+# gvm -h
 
-gvm 1.0.3
+gvm 1.0.4
 Golang Version Manager
 
 USAGE:
-    gvm.sh [OPTIONS] <SUBCOMMANDS>
+    gvm [OPTIONS] <SUBCOMMANDS>
 
 OPTIONS:
     -h, --help
@@ -75,7 +80,7 @@ curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/install.sh | bas
 - **MY_DIY_GO_PATH** 是自定义版本号, 例如： `/home/myhome/go`
 
 ```sh
-curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -d MY_DIY_GO_PATH
+curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -p MY_DIY_GO_PATH
 ```
 
 ### 离线执行
@@ -87,7 +92,7 @@ curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/install.sh | bas
 bash install.sh
 
 # 自定义
-bash install.sh -v 1.12.8 -d /home/myhome/go
+bash install.sh -v 1.12.8 -p /home/myhome/go
 ```
 
 脚本可执行权限，那么同时可以自定义 Go 版本和 GOPATH。
@@ -100,21 +105,30 @@ chmod +x install.sh
 ./install.sh
 
 # 自定义
-./install.sh -v 1.12.8 -d /home/myhome/go
+./install.sh -v 1.12.8 -p /home/myhome/go
 ```
 
-**使用说明**  
-./install.sh -h
+**使用说明**
 
 ```
 Go install
 
-Usage: ./install.sh [-h] [-v version] [-d gopath]
+USAGE:
+    install.sh [OPTIONS] <SUBCOMMANDS>
 
-Options:
-  -h            : this help
-  -v            : set go version (default: latest version)
-  -d            : set go path (default: $HOME/go)
+OPTIONS:
+    -h, --help
+                Print help information.
+
+    -p, --path
+                Set GOPATH. (default: $HOME/go)
+
+    -r, --root
+                Set GOROOT. (default: $HOME/.go)
+
+    -v, --version
+                Set golang version.
+
 ```
 
 ## License
