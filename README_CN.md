@@ -37,8 +37,8 @@ OPTIONS:
     -i, --install
                 Install Golang Version Manager
 
-    -u, --upgrade
-                Upgrade Golang Version Manager
+    -u, --update
+                Update Golang Version Manager
 
     -v, --version
                 Print Gvm version information
