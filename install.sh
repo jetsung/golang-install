@@ -198,16 +198,10 @@ latest_version() {
 # compare version
 compare_version() {
     OLD_VERSION="none"
-    NEW_VERSION="${RELEASE_TAG}"
+    NEW_VERSION="$RELEASE_TAG"
 
-    if [ -z "$__GOROOT" ]; then
-        if [ -f "${HOME}/.go/bin/go" ]; then
-            OLD_VERSION="$("${HOME}"/.go/bin/go version | awk '{print $3}')"
-        fi
-    else
-        if [ -f "$__GOROOT/.go/bin/go" ]; then
-            OLD_VERSION="$("$__GOROOT"/.go/bin/go version | awk '{print $3}')"
-        fi
+    if [ -f "$GOROOT_PATH/bin/go" ]; then
+        OLD_VERSION=$("$GOROOT_PATH"/bin/go version | awk '{print $3}')
     fi
 
     # DELETE current go
@@ -215,8 +209,8 @@ compare_version() {
     #     __CURRENT_GO=$(which go)
     # fi
 
-    if [ "${OLD_VERSION}" = "${NEW_VERSION}" ]; then
-        say_err "You have installed this version: ${OLD_VERSION}"
+    if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+        say_err "You have installed this version: $OLD_VERSION"
     fi
 
     printf "
@@ -238,13 +232,11 @@ create_folder() {
 # Download file and unpack
 download_unpack() {
     local downurl="$1"
+    local savepath="$2"
+
     printf "Fetching %s \n\n" "$downurl"
 
-    __TMP_PATH=""
-    create_folder "$__GOROOT"
-    REAL_PATH="$__TMP_PATH"
-
-    curl -Lk --retry 3 --max-time 30 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$REAL_PATH"
+    curl -Lk --retry 3 --max-time 30 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$savepath"
 }
 
 # compare version size
@@ -389,6 +381,10 @@ done
 
 create_folder "$__GOPATH"
 
+__TMP_PATH=""
+create_folder "$__GOROOT"
+GOROOT_PATH="$__TMP_PATH"
+
 IN_CHINA=""
 check_in_china
 if [ -n "$IN_CHINA" ]; then
@@ -415,7 +411,7 @@ show_system_information
 BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
 
 # Download and unpack
-download_unpack "$BINARY_URL"
+download_unpack "$BINARY_URL" "$GOROOT_PATH"
 
 # Set ENV
 set_environment

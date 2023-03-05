@@ -467,7 +467,10 @@ use_go() {
     if [ -f "$CURRENT_GO_BINARY" ]; then
         rm -rf "$GVM_GO_ROOT"
         ln -s "${GO_VERSIONS_PATH}/go${GO_VERSION}" "$GVM_GO_ROOT"
-        sedi "s@^export GOROOT.*@export GOROOT=\"${GVM_GO_ROOT}\"@" "$PROFILE"
+
+        # use $HOME instead of /home/{USER}/
+        __GVM_GO_ROOT=${GVM_GO_ROOT/"$HOME"/\$HOME}
+        sedi "s@^export GOROOT.*@export GOROOT=\"$__GVM_GO_ROOT\"@" "$PROFILE"
 
         # sedi "s@^export GOROOT.*@export GOROOT=\"${GO_VERSIONS_PATH}/go${GO_VERSION}\"@" "${PROFILE}"
         if ! command -v go >/dev/null 2>&1 || [[ $(go version | awk '{print $3}') != "go${GO_VERSION}" ]]; then

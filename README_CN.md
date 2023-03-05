@@ -14,7 +14,7 @@
 curl -fsL https://jihulab.com/jetsung/golang-install/-/raw/main/gvm.sh | bash -s -- -i
 
 # 或者
-git clone https://github.com/jetsung/golang-install.git
+git clone https://jihulab.com/jetsung/golang-install.git
 cd golang-install
 ./gvm.sh -i
 ```
