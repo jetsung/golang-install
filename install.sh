@@ -236,7 +236,7 @@ download_unpack() {
 
     printf "Fetching %s \n\n" "$downurl"
 
-    curl -Lk --retry 3 --max-time 30 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$savepath"
+    curl -Lk --retry 3 --max-time 180 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$savepath"
 }
 
 # compare version size
