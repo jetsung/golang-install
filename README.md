@@ -32,7 +32,7 @@ gvm version
 ```bash
 # gvm -h
 
-gvm 1.0.4
+gvm 1.0.8
 Golang Version Manager
 
 USAGE:
@@ -41,10 +41,10 @@ USAGE:
 OPTIONS:
     -h, --help
                 Print help information
-
+            
     -i, --install
                 Install Golang Version Manager
-
+            
     -u, --update
                 Update Golang Version Manager
 
@@ -52,12 +52,12 @@ OPTIONS:
                 Print Gvm version information
 
 SUBCOMMANDS:
-  current               Print the current go version
-  install [version]     Install a new go version
-  list                  List all locally installed go versions
-  list-remote <more>    List all remote go versions
-  uninstall             Uninstall a Go version
-  use [version]         Change Go version
+  current                    Print the current go version
+  install [VERSION|latest]   Install a new go version  
+  list                       List all locally installed go versions
+  list-remote <more>         List all remote go versions
+  uninstall                  Uninstall a Go version                
+  use [VERSION|latest]       Change Go version
 ```
 
 # Golang Install

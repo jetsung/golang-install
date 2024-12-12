@@ -234,7 +234,7 @@ do_something() {
         if [ -z "${OPTIONS}" ]; then
             say_err "Missing go version argument. \n      Example: $script_name uninstall [VERSION]\n"
         fi
-        GO_VERSION="${OPTIONS}"
+        GO_VERSION="${OPTIONS#go}"
         uninstall_go
         exit
         ;;
