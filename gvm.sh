@@ -210,7 +210,12 @@ do_something() {
         if [ -z "$OPTIONS" ]; then
             say_err "Missing go version argument. \n      Example: $script_name install [VERSION]\n"
         fi
-        GO_VERSION="$OPTIONS"
+
+        if [ "${OPTIONS}" = "latest" ]; then
+            OPTIONS=$(show_remote_list | sort -rV | head -n 1)
+        fi
+
+        GO_VERSION="${OPTIONS#go}"
         install_go
         exit
         ;;
@@ -238,7 +243,12 @@ do_something() {
         if [ -z "${OPTIONS}" ]; then
             say_err "Missing go version argument. \n      Example: $script_name use [VERSION]\n"
         fi
-        GO_VERSION="${OPTIONS}"
+
+        if [ "${OPTIONS}" = "latest" ]; then
+            OPTIONS=$(show_remote_list | sort -rV | head -n 1)
+        fi
+
+        GO_VERSION="${OPTIONS#go}"
         use_go
         exit
         ;;
@@ -316,12 +326,12 @@ Golang Version Manager
                 Print Gvm version information
 
 \e[1;33mSUBCOMMANDS:\e[m
-  \e[1;32mcurrent\e[m               Print the current go version
-  \e[1;32minstall\e[m [version]     Install a new go version  
-  \e[1;32mlist\e[m                  List all locally installed go versions
-  \e[1;32mlist-remote\e[m <more>    List all remote go versions
-  \e[1;32muninstall\e[m             Uninstall a Go version                
-  \e[1;32muse\e[m [version]         Change Go version
+  \e[1;32mcurrent\e[m                    Print the current go version
+  \e[1;32minstall\e[m [VERSION|latest]   Install a new go version  
+  \e[1;32mlist\e[m                       List all locally installed go versions
+  \e[1;32mlist-remote\e[m <more>         List all remote go versions
+  \e[1;32muninstall\e[m                  Uninstall a Go version                
+  \e[1;32muse\e[m [VERSION|latest]       Change Go version
 \n" "$GVM_VERSION" "${script_name##*/}"
     exit 1
 }
@@ -480,7 +490,7 @@ use_go() {
     fi
 }
 
-GVM_VERSION="1.0.7"
+GVM_VERSION="1.0.8"
 
 GVM_PATH="$HOME/.gvm"
 GVM_BIN_PATH="$GVM_PATH/bin"
