@@ -379,7 +379,7 @@ go_list_remote() {
     local GO_DL_URL="https://go.dev/dl/"
     [ -z "$IN_CHINA" ] || GO_DL_URL="https://golang.google.cn/dl/"
 
-    RELEASE_TAGS="$(curl -sL --retry 5 --max-time 10 "$GO_DL_URL" | sed -n '/toggle/p' | cut -d '"' -f 4 | grep go)"
+    RELEASE_TAGS=$(curl -sL --retry 5 --max-time 10 "$GO_DL_URL" | sed -n '/toggle/p' | cut -d '"' -f 4 | grep go | grep -Ev 'rc|beta')
 
     while IFS=$'\n' read -r -d ' ' _V; do
         REMOTE_GO_LIST[${#REMOTE_GO_LIST[@]}]="$_V"
