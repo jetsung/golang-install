@@ -490,7 +490,7 @@ use_go() {
     fi
 }
 
-GVM_VERSION="1.0.8"
+GVM_VERSION="1.0.9"
 
 GVM_PATH="$HOME/.gvm"
 GVM_BIN_PATH="$GVM_PATH/bin"

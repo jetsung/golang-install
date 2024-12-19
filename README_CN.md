@@ -32,7 +32,7 @@ gvm version
 ```bash
 # gvm -h
 
-gvm 1.0.8
+gvm 1.0.9
 Golang Version Manager
 
 USAGE:
