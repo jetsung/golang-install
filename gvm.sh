@@ -31,7 +31,6 @@ if [ -t 1 ] && command -v tput >/dev/null; then
 fi
 
 say_warning() {
-    # shellcheck disable=SC2317
     printf "%b\n" "${yellow:-}$script_name: Warning: $1${normal:-}" >&3
 }
 
@@ -59,54 +58,36 @@ sh_echo() {
 
 # Get PROFILE
 detect_profile() {
-    if [ "${PROFILE:-}" = '/dev/null' ]; then
-        # the user has specifically requested NOT to have nvm touch their profile
-        return
-    fi
-
-    if [ -n "$PROFILE" ] && [ -f "$PROFILE" ]; then
-        sh_echo "$PROFILE"
-        return
-    fi
-
-    local DETECTED_PROFILE
-    DETECTED_PROFILE=''
+    local DETECTED_PROFILE=""
 
     if [ -z "${SHELL:-}" ]; then
         SHELL="$(grep "^$(whoami):" /etc/passwd | cut -d: -f7)"
     fi
 
-    if [ "${SHELL#*bash}" != "$SHELL" ]; then
-        if [ -f "$HOME/.bashrc" ]; then
-            DETECTED_PROFILE="$HOME/.bashrc"
-        elif [ -f "$HOME/.bash_profile" ]; then
-            DETECTED_PROFILE="$HOME/.bash_profile"
-        fi
-    elif [ "${SHELL#*zsh}" != "$SHELL" ]; then
-        if [ -f "$HOME/.zshrc" ]; then
-            DETECTED_PROFILE="$HOME/.zshrc"
-        fi
-    elif [ "${SHELL#*sh}" != "$SHELL" ]; then
-        if [ -f "$HOME/.profile" ]; then
+    BASENAME_SHELL=$(basename "$SHELL")
+    case "$BASENAME_SHELL" in
+        'sh')
             DETECTED_PROFILE="$HOME/.profile"
-        fi
-    fi
+        ;;
+        'zsh')
+            DETECTED_PROFILE="$HOME/.zshrc"
+        ;;
+        'bash')
+            DETECTED_PROFILE="$HOME/.bashrc"
+        ;;
+        'fish')
+            DETECTED_PROFILE="$HOME/.config/fish/config.fish"
+        ;;
+        *)
+            return
+        ;;
+    esac
 
-    if [ -z "$DETECTED_PROFILE" ]; then
-        for EACH_PROFILE in ".profile" ".bashrc" ".bash_profile" ".zshrc"; do
-            if DETECTED_PROFILE="$(try_profile "$HOME/$EACH_PROFILE")"; then
-                break
-            fi
-        done
-    fi
-
-    if [ -z "$DETECTED_PROFILE" ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            DETECTED_PROFILE="/etc/profile"
-        fi
+    if [ ! -f "$DETECTED_PROFILE" ]; then
+        touch "$DETECTED_PROFILE"
     fi   
     
-    if [ -n "$DETECTED_PROFILE" ]; then
+    if [ -f "$DETECTED_PROFILE" ]; then
         sh_echo "$DETECTED_PROFILE"
     fi 
 }
@@ -122,7 +103,7 @@ sedi() {
 
 # check in china
 check_in_china() {
-    if ! curl -s -m 3 -IL https://google.com | grep -q "HTTP/2 200"; then
+    if [ "$(curl -s -m 3 -o /dev/null -w "%{http_code}" https://www.google.com)" != "200" ]; then
         IN_CHINA=1
     fi
 }
@@ -157,39 +138,39 @@ install_curl_command() {
 
 # set gvm environment
 set_environment() {
-    cat > "$GVM_ENV_PATH" <<-'EOF'
-#!/usr/bin/env bash
-
-export GVMPATH="$HOME/.gvm"
-export PATH="$PATH:$GVMPATH/bin"
-
-__MY_PATHS=""
-# Remove duplicate paths and remove go is not gvm version
-# export PATH=$(echo $PATH | sed 's/:/\n/g' | sort | uniq | tr -s '\n' ':' | sed 's/:$//g')
-while IFS=$'\n' read -r -d ' ' _V; do
-  if command -v "$_V/go" >/dev/null 2>&1 && [[ -f "$_V/go" ]]; then
-    [[ "$_V" == "$GVMPATH/go/bin" ]] || continue
-  fi
-  __MY_PATHS="$__MY_PATHS:$_V"
-done < <(echo "$PATH" | sed 's/:/\n/g' | sort | uniq | tr -s '\n' ' ')
-
-[[ -z "$__MY_PATHS" ]] || export PATH="${__MY_PATHS#*:}"
-EOF
-
-    if [ ! -f "$PROFILE" ]; then
-        touch "$PROFILE"
-    fi
-
     # shellcheck disable=SC2016
     if ! grep -q '$HOME/.gvm/env' "$PROFILE"; then
-        printf "\n## GVM\n" >>"$PROFILE"
-        echo '. "$HOME/.gvm/env"' >>"$PROFILE"
+        {
+            printf '\n## GVM\n. "$HOME/.gvm/env"\n' 
+        } >>"$PROFILE"
     else
         sedi 's@^. "$HOME/.gvm/.*@. "$HOME/.gvm/env"@' "$PROFILE"
     fi
 
-    # Remove duplicate paths
-    # export PATH=$(echo $PATH | sed 's/:/\n/g' | sort | uniq | tr -s '\n' ':' | sed 's/:$//g')
+    cat > "$GVM_ENV_PATH" <<-'EOF'
+#!/usr/bin/env sh
+
+export GVMPATH="$HOME/.gvm"
+
+case ":${PATH}:" in
+    *:"$GVMPATH/bin":*) ;;
+    *) export PATH="$GVMPATH/bin:$PATH" ;;
+esac
+
+## GOLANG
+export GOROOT="$HOME/.gvm/go"
+export GOPATH="$HOME/go"
+export GOBIN="$GOPATH/bin"
+export GOPROXY="https://goproxy.cn,https://goproxy.io,direct"
+export PATH="$PATH:$GOROOT/bin:$GOBIN"  
+EOF
+
+    if [ -z "$IN_CHINA" ]; then
+        sedi '/GOPROXY/d' "$GVM_ENV_PATH"
+    fi
+
+    # shellcheck disable=SC2016
+    sedi '/## GOLANG/,/export PATH="$PATH:$GOROOT"/d' "$PROFILE"
 }
 
 # update gvm.sh
@@ -203,8 +184,9 @@ gvm_script() {
     if [ -f "$CURRENT_GVM_PATH.sh" ]; then
         cp "$CURRENT_GVM_PATH.sh" "$GVM_SCRIPT_PATH"
     else # git update
-        check_in_china
-        [ -z "$IN_CHINA" ] || PRO_URL="$PRO_CN_URL"
+        if [ -n "$IN_CHINA" ]; then 
+            PRO_URL="$PRO_CN_URL"
+        fi
         curl -sSL -m 5 -o "$GVM_SCRIPT_PATH" "$PRO_URL/gvm.sh"
     fi
 
@@ -226,7 +208,6 @@ dl_goinstall_script() {
         if [ -f "./install.sh" ]; then
             cp -f "./install.sh" "$GO_INSTALL_SCRIPT"
         else # git update
-            check_in_china
             if [ -n "$IN_CHINA" ]; then
                 PRO_URL="$PRO_CN_URL"
             fi
@@ -279,7 +260,9 @@ go_list_locale() {
 go_list_remote() {
     check_in_china
     local GO_DL_URL="https://go.dev/dl/"
-    [ -z "$IN_CHINA" ] || GO_DL_URL="https://golang.google.cn/dl/"
+    if [ -n "$IN_CHINA" ]; then
+        GO_DL_URL="https://golang.google.cn/dl/"
+    fi
 
     RELEASE_TAGS=$(curl -sL --retry 5 --max-time 10 "$GO_DL_URL" | sed -n '/toggle/p' | cut -d '"' -f 4 | grep go | grep -Ev 'rc|beta')
 
@@ -376,7 +359,7 @@ uninstall_go() {
 
 # Use custom go version
 use_go() {
-    CURRENT_GO_BINARY="${GO_VERSIONS_PATH}/go${GO_VERSION}/bin/go"
+    CURRENT_GO_BINARY="$GO_VERSIONS_PATH/go$GO_VERSION/bin/go"
     if [ ! -f "$CURRENT_GO_BINARY" ]; then
         install_go
     else
@@ -387,11 +370,6 @@ use_go() {
         rm -rf "$GVM_GO_ROOT"
         ln -s "$GO_VERSIONS_PATH/go$GO_VERSION" "$GVM_GO_ROOT"
 
-        # use $HOME instead of /home/{USER}/
-        __GVM_GO_ROOT=${GVM_GO_ROOT/"$HOME"/\$HOME}
-        sedi "s@^export GOROOT.*@export GOROOT=\"$__GVM_GO_ROOT\"@" "$PROFILE"
-
-        # sedi "s@^export GOROOT.*@export GOROOT=\"${GO_VERSIONS_PATH}/go${GO_VERSION}\"@" "$PROFILE"
         if ! command -v go >/dev/null 2>&1 || [ "$(go version | awk '{print $3}')" != "go$GO_VERSION" ]; then
             printf "\nYou need to execute: \n\e[1;33msource %s\e[m\n" "$PROFILE"
         fi
@@ -618,7 +596,7 @@ set_project_url() {
 }
 
 main() {
-    GVM_VERSION="1.1.0"
+    GVM_VERSION="1.1.1"
 
     GVM_PATH="$HOME/.gvm"
     GVM_BIN_PATH="$GVM_PATH/bin"
@@ -630,7 +608,7 @@ main() {
 
     DEBUG=""
 
-    PROFILE=""
+    BASENAME_SHELL=""
     PROFILE="$(detect_profile)"
 
     if [ -z "$PROFILE" ]; then
@@ -638,9 +616,10 @@ main() {
     fi
 
     IN_CHINA=""
+    check_in_china
 
     REMOTE_GO_LIST=()
-    GO_VERSION_LIST=()    
+    GO_VERSION_LIST=()
 
     # 动作
     DO_ACTION=""

@@ -58,54 +58,36 @@ sh_echo() {
 
 # Get PROFILE
 detect_profile() {
-    if [ "${PROFILE:-}" = '/dev/null' ]; then
-        # the user has specifically requested NOT to have nvm touch their profile
-        return
-    fi
-
-    if [ -n "$PROFILE" ] && [ -f "$PROFILE" ]; then
-        sh_echo "$PROFILE"
-        return
-    fi
-
-    local DETECTED_PROFILE
-    DETECTED_PROFILE=''
+    local DETECTED_PROFILE=""
 
     if [ -z "${SHELL:-}" ]; then
         SHELL="$(grep "^$(whoami):" /etc/passwd | cut -d: -f7)"
     fi
 
-    if [ "${SHELL#*bash}" != "$SHELL" ]; then
-        if [ -f "$HOME/.bashrc" ]; then
-            DETECTED_PROFILE="$HOME/.bashrc"
-        elif [ -f "$HOME/.bash_profile" ]; then
-            DETECTED_PROFILE="$HOME/.bash_profile"
-        fi
-    elif [ "${SHELL#*zsh}" != "$SHELL" ]; then
-        if [ -f "$HOME/.zshrc" ]; then
-            DETECTED_PROFILE="$HOME/.zshrc"
-        fi
-    elif [ "${SHELL#*sh}" != "$SHELL" ]; then
-        if [ -f "$HOME/.profile" ]; then
+    BASENAME_SHELL=$(basename "$SHELL")
+    case "$BASENAME_SHELL" in
+        'sh')
             DETECTED_PROFILE="$HOME/.profile"
-        fi
-    fi
+        ;;
+        'zsh')
+            DETECTED_PROFILE="$HOME/.zshrc"
+        ;;
+        'bash')
+            DETECTED_PROFILE="$HOME/.bashrc"
+        ;;
+        'fish')
+            DETECTED_PROFILE="$HOME/.config/fish/config.fish"
+        ;;
+        *)
+            return
+        ;;
+    esac
 
-    if [ -z "$DETECTED_PROFILE" ]; then
-        for EACH_PROFILE in ".profile" ".bashrc" ".bash_profile" ".zshrc"; do
-            if DETECTED_PROFILE="$(try_profile "$HOME/$EACH_PROFILE")"; then
-                break
-            fi
-        done
-    fi
-
-    if [ -z "$DETECTED_PROFILE" ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            DETECTED_PROFILE="/etc/profile"
-        fi
+    if [ ! -f "$DETECTED_PROFILE" ]; then
+        touch "$DETECTED_PROFILE"
     fi   
     
-    if [ -n "$DETECTED_PROFILE" ]; then
+    if [ -f "$DETECTED_PROFILE" ]; then
         sh_echo "$DETECTED_PROFILE"
     fi 
 }
@@ -119,29 +101,6 @@ sedi() {
     fi
 }
 
-# show help message
-show_help_message() {
-    printf "Go install
-
-\e[1;33mUSAGE:\e[m
-    \e[1;32m%s\e[m [OPTIONS] <SUBCOMMANDS>
-
-\e[1;33mOPTIONS:\e[m
-    \e[1;32m-h, --help\e[m
-                Print help information.
-
-    \e[1;32m-p, --path\e[m
-                Set GOPATH. (default: \$HOME/go)  
-
-    \e[1;32m-r, --root\e[m
-                Set GOROOT. (default: \$HOME/.go)                 
-
-    \e[1;32m-v, --version\e[m
-                Set golang version.                  
-\n" "$script_dir_name"
-    exit
-}
-
 # custom version
 custom_version() {
     if [ -n "$1" ]; then
@@ -151,7 +110,7 @@ custom_version() {
 
 # check in china
 check_in_china() {
-    if ! curl -s -m 3 -IL https://google.com | grep -q "HTTP/2 200"; then
+    if [ "$(curl -s -m 3 -o /dev/null -w "%{http_code}" https://www.google.com)" != "200" ]; then
         IN_CHINA=1
     fi
 }
@@ -215,14 +174,10 @@ compare_version() {
     OLD_VERSION="none"
     NEW_VERSION="$RELEASE_TAG"
 
-    if [ -f "$GOROOT_PATH/bin/go" ]; then
-        OLD_VERSION=$("$GOROOT_PATH"/bin/go version | awk '{print $3}')
+    _gobin="${GOROOT:-}/bin/go"
+    if [ -f "$_gobin" ]; then
+        OLD_VERSION=$("$_gobin" version | awk '{print $3}')
     fi
-
-    # DELETE current go
-    # if [[ "$OLD_VERSION"="none" ]]; then
-    #     __CURRENT_GO=$(which go)
-    # fi
 
     if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
         say_err "You have installed this version: $OLD_VERSION"
@@ -234,71 +189,64 @@ Target  version: \e[1;33m %s \e[0m
 " "$OLD_VERSION" "$NEW_VERSION"
 }
 
-# create folder
-create_folder() {
-    if [ -n "${1:-}" ]; then
-        local MYPATH="$1"
-        local REAL_PATH=${MYPATH/\$HOME/$HOME}
-        [ -d "$REAL_PATH" ] || mkdir "$REAL_PATH"
-        __TMP_PATH="$REAL_PATH"
+check_gvm() {
+    # shellcheck disable=SC2016
+    if grep -q '$HOME/.gvm/env' "$PROFILE"; then
+        IS_GVM=1
     fi
-}
+}    
 
 # Download file and unpack
 download_unpack() {
     local downurl="$1"
     local savepath="$2"
 
+    if [ -z "$downurl" ] || [ -z "$savepath" ]; then
+        say_err "not found downurl or savepath"
+    fi
+
     printf "Fetching %s \n\n" "$downurl"
 
-    curl -Lk --connect-timeout 30 --retry 5 --retry-max-time 360 --max-time 300 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$savepath"
+    _tempdir=$(mktemp -d -t goroot.XXXXXX)
+    curl -Lk --connect-timeout 30 --retry 5 --retry-max-time 360 --max-time 300 "$downurl" | gunzip | tar xf - --strip-components=1 -C "$_tempdir" || {
+        say_err "download and unpack failed"
+    }
+    if [ -d "$savepath" ]; then
+        rm -rf "$savepath"
+    fi
+    mv "$_tempdir" "$savepath"
 }
 
 # compare version size
-version_ge() { [[ "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1" ]]; }
+version_ge() { [ "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1" ]; }
 
 # set golang environment
 set_environment() {
-    if ! grep -q 'export\sGOROOT' "$PROFILE"; then
-        printf "\n## GOLANG\n" >>"$PROFILE"
-        echo "export GOROOT=\"$__GOROOT\"" >>"$PROFILE"
-    else
-        sedi "s@^export GOROOT.*@export GOROOT=\"$__GOROOT\"@" "$PROFILE"
-    fi
-
-    if ! grep -q 'export\sGOPATH' "$PROFILE"; then
-        echo "export GOPATH=\"$__GOPATH\"" >>"$PROFILE"
-    else
-        sedi "s@^export GOPATH.*@export GOPATH=\"$__GOPATH\"@" "$PROFILE"
-    fi
-
-    if ! grep -q 'export\sGOBIN' "$PROFILE"; then
-        # shellcheck disable=SC2016
-        echo 'export GOBIN="$GOPATH/bin"' >>"$PROFILE"
-    else
-        sedi "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "$PROFILE"
-    fi
-
-    if ! grep -q 'export\sGO111MODULE' "$PROFILE"; then
-        echo "export GO111MODULE=on" >>"$PROFILE"
-    fi
-
-    if ! grep -q 'export\sASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH' "$PROFILE"; then
-        if version_ge "$RELEASE_TAG" "go1.17"; then
-            echo "export ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.18" >>"$PROFILE"
-        fi
-    fi
-
-    if ! grep -q 'export\sGOPROXY' "$PROFILE"; then
-        echo "export GOPROXY=\"$__GOPROXY_URL,direct\"" >>"$PROFILE"
-    else
-        sedi "s@^export GOPROXY.*@export GOPROXY=\"$__GOPROXY_URL,direct\"@" "$PROFILE"
+    if [ -n "$IS_GVM" ]; then
+        return
     fi
 
     # shellcheck disable=SC2016
-    if ! grep -q '$GOROOT/bin:$GOBIN' "$PROFILE"; then
+    sedi '/## GOLANG/,/export PATH="$PATH:$GOROOT"/d' "$PROFILE"
+
+    # shellcheck disable=SC2001
+    _goroot=$(echo "$GO_ROOT" | sed "s|$HOME|\\\$HOME|g")
+    # shellcheck disable=SC2001
+    _gopath=$(echo "$GO_PATH" | sed "s|$HOME|\\\$HOME|g")
+    {
+        echo
+        echo '## GOLANG'
+        echo "export GOROOT=\"$_goroot\""
+        echo "export GOPATH=\"$_gopath\""
         # shellcheck disable=SC2016
-        echo 'export PATH="$PATH:$GOROOT/bin:$GOBIN"' >>"$PROFILE"
+        echo 'export GOBIN="$GOPATH/bin"'
+        echo 'GOPROXY="https://goproxy.cn,https://goproxy.io,direct"'
+        # shellcheck disable=SC2016
+        echo 'export PATH="$PATH:$GOROOT/bin:$GOBIN"'
+    } >>"$PROFILE"
+
+    if [ -z "$IN_CHINA" ]; then
+        sedi '/GOPROXY/d' "$PROFILE"
     fi
 }
 
@@ -310,7 +258,7 @@ show_copyright() {
 ###############################################################
 ###  Golang Install
 ###
-###  Author:  Jetsung Chan <jetsungchan@gmail.com>
+###  Author:  Jetsung Chan <i@jetsung.com>
 ###  Link:    https://jetsung.com
 ###  Project: %s
 ###############################################################
@@ -332,112 +280,173 @@ show_system_information() {
 show_success_message() {
     printf "
 ###############################################################
-# Install success, please execute again \e[1;33msource %s\e[0m
+# Installation successful, please execute again \e[1;33msource %s\e[0m
 ###############################################################
 \n" "$PROFILE"
 }
 
-# Downlaod URL
-DOWNLOAD_URL="https://dl.google.com/go/"
+# show help message
+show_help_message() {
+    printf "Go install
 
-# Release URL
-RELEASE_URL="https://go.dev/dl/"
-RELEASE_CN_URL="https://golang.google.cn/dl/"
+\e[1;33mUSAGE:\e[m
+    \e[1;32m%s\e[m [OPTIONS]
 
-# GOPROXY
-__GOPROXY_URL="https://proxy.golang.org"
-__GOPROXY_CN_URL="https://goproxy.cn,https://goproxy.io"
+\e[1;33mOPTIONS:\e[m
+    \e[1;32m-p, --path\e[m <GOPATH>
+                Set GOPATH. (default: \$HOME/go)  
 
-# GOPATH
-# shellcheck disable=SC2016
-__GOPATH='$HOME/go'
+    \e[1;32m-r, --root\e[m <GOROOT>
+                Set GOROOT. (default: \$HOME/.go)                 
 
-# GOROOT
-# shellcheck disable=SC2016
-__GOROOT='$HOME/.go'
+    \e[1;32m-v, --version\e[m <VERSION>
+                Set golang version.                  
 
-# Project URL
-PROJECT_URL="https://github.com/jetsung/golang-install"
-PROJECT_CN_URL="https://framagit.org/jetsung/golang-install"
+    \e[1;32m-h, --help\e[m
+                Print help information.
+\n" "$script_dir_name"
+    exit
+}
 
-# Profile
-PROFILE=""
-PROFILE="$(detect_profile)"
+# 处理参数信息
+judgment_parameters() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
 
-if [ -z "$PROFILE" ]; then
-    say_err "Error: can not find profile"
-fi
+        '-p' | '--path')
+            if [ -z "${2:-}" ]; then
+                say_err "Missing go path argument. \n      Example: $script_name --path [GOPATH]\n"
+            fi
+            if [[ "$2" == -* ]]; then
+                shift
+                continue
+            fi
+            GO_PATH="${2:-}"
+            shift
+            ;;
 
-# Release tag
-RELEASE_TAG=""
+        '-r' | '--root')
+            if [ -z "${2:-}" ]; then
+                say_err "Missing go root argument. \n      Example: $script_name --root [GOROOT]\n"
+            fi
+            if [[ "$2" == -* ]]; then
+                shift
+                continue
+            fi
+            GO_ROOT="${2:-}"
+            shift
+            ;;
 
-for ARG in "$@"; do
-    case "$ARG" in
-    --help | -h)
-        show_help_message
-        ;;
+        '-v' | '--version')
+            if [ -z "${2:-}" ]; then
+                say_err "Missing go version argument. \n      Example: $script_name --version [VERSION]\n"
+            fi
+            if [[ "$2" == -* ]]; then
+                shift
+                continue
+            fi
+            custom_version "${2:-}"
+            shift
+            ;;
 
-    --path | -p)
+        # 帮助
+        '-h' | '--help')
+            show_help_message
+            ;;
+
+        # 未知参数
+        *)
+            say_err "$script_dir_name: unknown option - $1"
+            ;;
+
+        esac
         shift
-        if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
-            __GOPATH=${1/"$HOME"/\$HOME}
+    done
+}
+
+do_action() {
+    echo
+}
+
+set_project_url() {
+    # Release URL
+    RELEASE_URL="https://go.dev/dl/"
+    RELEASE_CN_URL="https://golang.google.cn/dl/"
+
+    # Project URL
+    PROJECT_URL="https://github.com/jetsung/golang-install"
+    PROJECT_CN_URL="https://framagit.org/jetsung/golang-install"
+
+    if [ -n "$IN_CHINA" ]; then
+        RELEASE_URL="$RELEASE_CN_URL"
+        PROJECT_URL="$PROJECT_CN_URL"
+    fi
+}
+
+main() {
+    # GVM
+    IS_GVM=""
+    GVMPATH=${GVMPATH:-$HOME/.gvm}
+
+    # Downlaod URL
+    DOWNLOAD_URL="https://dl.google.com/go/"
+
+    # GOPATH
+    # shellcheck disable=SC2016
+    GO_PATH="$HOME/go"
+
+    # GOROOT
+    GO_ROOT="$HOME/.go"
+
+    # Release tag / go version 
+    RELEASE_TAG=""
+
+    BASENAME_SHELL=""
+    PROFILE="$(detect_profile)"
+
+    if [ -z "$PROFILE" ]; then
+        say_err "Error: can not find profile"
+    fi
+
+    # 提取参数和值
+    judgment_parameters "$@"    
+
+    check_gvm
+    if [ -n "$IS_GVM" ]; then
+        if [ ! -d "$GVMPATH/packages" ]; then
+            mkdir -p "$GVMPATH/packages"
         fi
-        ;;
+        GO_ROOT="$GVMPATH/packages/$RELEASE_TAG"
+    fi
 
-    --root | -r)
-        shift
-        if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
-            __GOROOT=${1/"$HOME"/\$HOME}
-        fi
-        ;;
+    IN_CHINA=""
+    check_in_china
+    set_project_url
 
-    --version | -v)
-        shift
-        if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
-            custom_version "$1"
-        fi
-        ;;
-    *)
-        shift
-        ;;
-    esac
-done
+    show_copyright
 
-create_folder "$__GOPATH"
+    init_arch
 
-__TMP_PATH=""
-create_folder "$__GOROOT"
-GOROOT_PATH="$__TMP_PATH"
+    init_os
 
-IN_CHINA=""
-check_in_china
-if [ -n "$IN_CHINA" ]; then
-    RELEASE_URL="$RELEASE_CN_URL"
-    PROJECT_URL="$PROJECT_CN_URL"
-    __GOPROXY_URL="$__GOPROXY_CN_URL"
-fi
+    install_curl_command
 
-show_copyright
+    latest_version
 
-init_arch
+    compare_version
 
-init_os
+    show_system_information
 
-install_curl_command
+    # Download File
+    BINARY_URL="$DOWNLOAD_URL$RELEASE_TAG.$OS-$ARCH.tar.gz"
 
-latest_version
+    # Download and unpack
+    download_unpack "$BINARY_URL" "$GO_ROOT"
 
-compare_version
+    # Set ENV
+    set_environment || say_err "set environment error"
 
-show_system_information
+    show_success_message
+}
 
-# Download File
-BINARY_URL="$DOWNLOAD_URL$RELEASE_TAG.$OS-$ARCH.tar.gz"
-
-# Download and unpack
-download_unpack "$BINARY_URL" "$GOROOT_PATH"
-
-# Set ENV
-set_environment
-
-show_success_message
+main "$@" || exit 1

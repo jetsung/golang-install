@@ -32,7 +32,7 @@ gvm version
 ```bash
 # gvm -h
 
-gvm 1.1.0
+gvm 1.1.1
 
 Golang Version Manager
 
@@ -118,25 +118,24 @@ chmod +x install.sh
 
 **使用说明**
 
-```
+```sh
 Go install
 
 USAGE:
-    install.sh [OPTIONS] <SUBCOMMANDS>
+    install.sh [OPTIONS]
 
 OPTIONS:
+    -p, --path <GOPATH>
+                Set GOPATH. (default: $HOME/go)  
+
+    -r, --root <GOROOT>
+                Set GOROOT. (default: $HOME/.go)                 
+
+    -v, --version <VERSION>
+                Set golang version.                  
+
     -h, --help
                 Print help information.
-
-    -p, --path
-                Set GOPATH. (default: $HOME/go)
-
-    -r, --root
-                Set GOROOT. (default: $HOME/.go)
-
-    -v, --version
-                Set golang version.
-
 ```
 
 ## License
