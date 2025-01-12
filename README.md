@@ -14,7 +14,7 @@ English | [简体中文](./README_CN.md)
 ## Install
 
 ```bash
-curl -fsL https://github.com/jetsung/golang-install/raw/main/gvm.sh | bash -s -- -i
+curl -fsL https://github.com/jetsung/golang-install/raw/main/gvm.sh | bash
 
 # or
 git clone https://github.com/jetsung/golang-install.git

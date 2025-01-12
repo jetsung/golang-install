@@ -7,13 +7,12 @@
 #
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
-set -e
-set -u
-set -o pipefail
+set -euo pipefail
 
 exec 3>&1
 
 script_name=$(basename "$0")
+script_dir_name="${script_name##*/}"
 
 if [ -t 1 ] && command -v tput >/dev/null; then
     ncolors=$(tput colors || echo 0)
@@ -46,10 +45,10 @@ say() {
 
 # try profile
 try_profile() {
-    if [ -z "${1-}" ] || [ ! -f "${1}" ]; then
+    if [ -z "${1:-}" ] || [ ! -f "$1" ]; then
         return 1
     fi
-    sh_echo "${1}"
+    sh_echo "$1"
 }
 
 # sh echo
@@ -59,18 +58,22 @@ sh_echo() {
 
 # Get PROFILE
 detect_profile() {
-    if [ "${PROFILE-}" = '/dev/null' ]; then
+    if [ "${PROFILE:-}" = '/dev/null' ]; then
         # the user has specifically requested NOT to have nvm touch their profile
         return
     fi
 
-    if [ -n "${PROFILE}" ] && [ -f "${PROFILE}" ]; then
-        sh_echo "${PROFILE}"
+    if [ -n "$PROFILE" ] && [ -f "$PROFILE" ]; then
+        sh_echo "$PROFILE"
         return
     fi
 
     local DETECTED_PROFILE
     DETECTED_PROFILE=''
+
+    if [ -z "${SHELL:-}" ]; then
+        SHELL="$(grep "^$(whoami):" /etc/passwd | cut -d: -f7)"
+    fi
 
     if [ "${SHELL#*bash}" != "$SHELL" ]; then
         if [ -f "$HOME/.bashrc" ]; then
@@ -82,24 +85,34 @@ detect_profile() {
         if [ -f "$HOME/.zshrc" ]; then
             DETECTED_PROFILE="$HOME/.zshrc"
         fi
+    elif [ "${SHELL#*sh}" != "$SHELL" ]; then
+        if [ -f "$HOME/.profile" ]; then
+            DETECTED_PROFILE="$HOME/.profile"
+        fi
     fi
 
     if [ -z "$DETECTED_PROFILE" ]; then
         for EACH_PROFILE in ".profile" ".bashrc" ".bash_profile" ".zshrc"; do
-            if DETECTED_PROFILE="$(try_profile "${HOME}/${EACH_PROFILE}")"; then
+            if DETECTED_PROFILE="$(try_profile "$HOME/$EACH_PROFILE")"; then
                 break
             fi
         done
     fi
 
+    if [ -z "$DETECTED_PROFILE" ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            DETECTED_PROFILE="/etc/profile"
+        fi
+    fi   
+    
     if [ -n "$DETECTED_PROFILE" ]; then
         sh_echo "$DETECTED_PROFILE"
-    fi
+    fi 
 }
 
 # fix macos
 sedi() {
-    if [ "${OS}" = "darwin" ]; then
+    if [ "$OS" = "darwin" ]; then
         sed -i "" "$@"
     else
         sed -i "$@"
@@ -125,14 +138,14 @@ show_help_message() {
 
     \e[1;32m-v, --version\e[m
                 Set golang version.                  
-\n" "${script_name##*/}"
+\n" "$script_dir_name"
     exit
 }
 
 # custom version
 custom_version() {
-    if [ -n "${1}" ]; then
-        RELEASE_TAG="go${1}"
+    if [ -n "$1" ]; then
+        RELEASE_TAG="go$1"
     fi
 }
 
@@ -146,8 +159,9 @@ check_in_china() {
 # Get OS bit
 init_arch() {
     ARCH=$(uname -m)
-    BIT="${ARCH}"
-    case "${ARCH}" in
+    BIT="$ARCH"
+
+    case "$ARCH" in
     amd64) ARCH="amd64" ;;
     x86_64) ARCH="amd64" ;;
     i386) ARCH="386" ;;
@@ -163,7 +177,8 @@ init_arch() {
 # Get OS version
 init_os() {
     OS=$(uname | tr '[:upper:]' '[:lower:]')
-    case "${OS}" in
+
+    case "$OS" in
     darwin) OS='darwin' ;;
     linux) OS='linux' ;;
     freebsd) OS='freebsd' ;;
@@ -191,7 +206,7 @@ install_curl_command() {
 # if RELEASE_TAG was not provided, assume latest
 latest_version() {
     if [ -z "$RELEASE_TAG" ]; then
-        RELEASE_TAG="$(curl -sL --retry 5 --max-time 30 "${RELEASE_URL}" | sed -n '/toggleVisible/p' | head -n 1 | cut -d '"' -f 4)"
+        RELEASE_TAG="$(curl -sL --retry 5 --max-time 30 "$RELEASE_URL" | sed -n '/toggleVisible/p' | head -n 1 | cut -d '"' -f 4)"
     fi
 }
 
@@ -221,8 +236,8 @@ Target  version: \e[1;33m %s \e[0m
 
 # create folder
 create_folder() {
-    if [ -n "${1}" ]; then
-        local MYPATH="${1}"
+    if [ -n "${1:-}" ]; then
+        local MYPATH="$1"
         local REAL_PATH=${MYPATH/\$HOME/$HOME}
         [ -d "$REAL_PATH" ] || mkdir "$REAL_PATH"
         __TMP_PATH="$REAL_PATH"
@@ -252,13 +267,14 @@ set_environment() {
     fi
 
     if ! grep -q 'export\sGOPATH' "$PROFILE"; then
-        echo "export GOPATH=\"$__GOPATH\"" >>"${PROFILE}"
+        echo "export GOPATH=\"$__GOPATH\"" >>"$PROFILE"
     else
         sedi "s@^export GOPATH.*@export GOPATH=\"$__GOPATH\"@" "$PROFILE"
     fi
 
     if ! grep -q 'export\sGOBIN' "$PROFILE"; then
-        echo "export GOBIN=\"\$GOPATH/bin\"" >>"$PROFILE"
+        # shellcheck disable=SC2016
+        echo 'export GOBIN="$GOPATH/bin"' >>"$PROFILE"
     else
         sedi "s@^export GOBIN.*@export GOBIN=\$GOPATH/bin@" "$PROFILE"
     fi
@@ -279,8 +295,10 @@ set_environment() {
         sedi "s@^export GOPROXY.*@export GOPROXY=\"$__GOPROXY_URL,direct\"@" "$PROFILE"
     fi
 
-    if ! grep -q "\$GOROOT/bin:\$GOBIN" "$PROFILE"; then
-        echo "export PATH=\"\$PATH:\$GOROOT/bin:\$GOBIN\"" >>"$PROFILE"
+    # shellcheck disable=SC2016
+    if ! grep -q '$GOROOT/bin:$GOBIN' "$PROFILE"; then
+        # shellcheck disable=SC2016
+        echo 'export PATH="$PATH:$GOROOT/bin:$GOBIN"' >>"$PROFILE"
     fi
 }
 
@@ -331,10 +349,12 @@ __GOPROXY_URL="https://proxy.golang.org"
 __GOPROXY_CN_URL="https://goproxy.cn,https://goproxy.io"
 
 # GOPATH
-__GOPATH="\$HOME/go"
+# shellcheck disable=SC2016
+__GOPATH='$HOME/go'
 
 # GOROOT
-__GOROOT="\$HOME/.go"
+# shellcheck disable=SC2016
+__GOROOT='$HOME/.go'
 
 # Project URL
 PROJECT_URL="https://github.com/jetsung/golang-install"
@@ -344,33 +364,37 @@ PROJECT_CN_URL="https://framagit.org/jetsung/golang-install"
 PROFILE=""
 PROFILE="$(detect_profile)"
 
+if [ -z "$PROFILE" ]; then
+    say_err "Error: can not find profile"
+fi
+
 # Release tag
 RELEASE_TAG=""
 
 for ARG in "$@"; do
-    case "${ARG}" in
+    case "$ARG" in
     --help | -h)
         show_help_message
         ;;
 
     --path | -p)
         shift
-        if [ $# -ge 1 ] && [[ "${1}" != -* ]]; then
+        if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
             __GOPATH=${1/"$HOME"/\$HOME}
         fi
         ;;
 
     --root | -r)
         shift
-        if [ $# -ge 1 ] && [[ "${1}" != -* ]]; then
+        if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
             __GOROOT=${1/"$HOME"/\$HOME}
         fi
         ;;
 
     --version | -v)
         shift
-        if [ $# -ge 1 ] && [[ "${1}" != -* ]]; then
-            custom_version "${1}"
+        if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
+            custom_version "$1"
         fi
         ;;
     *)
@@ -388,9 +412,9 @@ GOROOT_PATH="$__TMP_PATH"
 IN_CHINA=""
 check_in_china
 if [ -n "$IN_CHINA" ]; then
-    RELEASE_URL="${RELEASE_CN_URL}"
-    PROJECT_URL="${PROJECT_CN_URL}"
-    __GOPROXY_URL="${__GOPROXY_CN_URL}"
+    RELEASE_URL="$RELEASE_CN_URL"
+    PROJECT_URL="$PROJECT_CN_URL"
+    __GOPROXY_URL="$__GOPROXY_CN_URL"
 fi
 
 show_copyright
@@ -408,7 +432,7 @@ compare_version
 show_system_information
 
 # Download File
-BINARY_URL="${DOWNLOAD_URL}${RELEASE_TAG}.${OS}-${ARCH}.tar.gz"
+BINARY_URL="$DOWNLOAD_URL$RELEASE_TAG.$OS-$ARCH.tar.gz"
 
 # Download and unpack
 download_unpack "$BINARY_URL" "$GOROOT_PATH"

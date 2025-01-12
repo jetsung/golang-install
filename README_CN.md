@@ -14,7 +14,7 @@
 ## 安装
 
 ```bash
-curl -fsL https://framagit.org/jetsung/golang-install/-/raw/main/gvm.sh | bash -s -- -i
+curl -fsL https://framagit.org/jetsung/golang-install/-/raw/main/gvm.sh | bash
 
 # 或者
 git clone https://framagit.org/jetsung/golang-install.git
