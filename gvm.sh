@@ -7,7 +7,11 @@
 #
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
-set -euo pipefail
+if [[ -n "${DEBUG:-}" ]]; then
+    set -eux
+else
+    set -euo pipefail
+fi
 
 exec 3>&1
 
@@ -103,9 +107,13 @@ sedi() {
 
 # check in china
 check_in_china() {
-    if [ "$(curl -s -m 3 -o /dev/null -w "%{http_code}" https://www.google.com)" != "200" ]; then
-        IN_CHINA=1
+    if [[ -n "${CN:-}" ]]; then
+        return 0 # 手动指定
     fi
+    if [[ "$(curl -s -m 3 -o /dev/null -w "%{http_code}" https://www.google.com)" == "000" ]]; then
+        return 0 # 中国网络
+    fi
+    return 1 # 非中国网络
 }
 
 # Get OS version
@@ -258,7 +266,10 @@ go_list_locale() {
 
 # Obtain a list of versions from the Go official website.
 go_list_remote() {
-    check_in_china
+    IN_CHINA=""
+    if check_in_china; then
+        IN_CHINA=1
+    fi
     local GO_DL_URL="https://go.dev/dl/"
     if [ -n "$IN_CHINA" ]; then
         GO_DL_URL="https://golang.google.cn/dl/"
@@ -302,6 +313,10 @@ install_go() {
     $SHELL $GO_INSTALL_SCRIPT $PARAMS >"$HOME/.gvm.log" 2>&1
     # shellcheck disable=SC1090,SC2086
     CURRENT_GO_BINARY="$GO_VERSIONS_PATH/go$GO_VERSION/bin/go"
+
+    if [ ! -d "$GVM_GO_ROOT" ]; then
+        ln -s "$GO_VERSIONS_PATH/go$GO_VERSION" "$GVM_GO_ROOT"    
+    fi
 
     if [ -f "$CURRENT_GO_BINARY" ]; then
         $CURRENT_GO_BINARY version
@@ -616,7 +631,9 @@ main() {
     fi
 
     IN_CHINA=""
-    check_in_china
+    if check_in_china; then
+        IN_CHINA=1
+    fi
 
     REMOTE_GO_LIST=()
     GO_VERSION_LIST=()
