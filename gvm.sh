@@ -3,7 +3,7 @@
 # Golang Version Manager
 # Project Home Page:
 # https://github.com/jetsung/golang-install
-# https://framagit.org/jetsung/golang-install
+# https://gitcode.com/jetsung/golang-install
 #
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
@@ -14,6 +14,8 @@ else
 fi
 
 exec 3>&1
+
+GVM_VERSION="1.1.2"
 
 script_name=$(basename "$0")
 script_dir_name="${script_name##*/}"
@@ -275,7 +277,7 @@ go_list_remote() {
         GO_DL_URL="https://golang.google.cn/dl/"
     fi
 
-    RELEASE_TAGS=$(curl -sL --retry 5 --max-time 10 "$GO_DL_URL" | sed -n '/toggle/p' | cut -d '"' -f 4 | grep go | grep -Ev 'rc|beta')
+    RELEASE_TAGS=$(curl -sL -m 5 "$GO_DL_URL" | sed -n '/toggle/p' | cut -d '"' -f 4 | grep go | grep -Ev 'rc|beta')
 
     while IFS=$'\n' read -r -d ' ' _V; do
         REMOTE_GO_LIST[${#REMOTE_GO_LIST[@]}]="$_V"
@@ -602,7 +604,7 @@ do_action() {
 
 set_project_url() {
     PRO_URL="https://raw.githubusercontent.com/jetsung/golang-install/main/"
-    PRO_CN_URL="https://framagit.org/jetsung/golang-install/-/raw/main/"
+    PRO_CN_URL="https://raw.gitcode.com/jetsung/golang-install/raw/main/"
 
     # DEBUG
     if [ -n "$DEBUG" ]; then
@@ -611,8 +613,6 @@ set_project_url() {
 }
 
 main() {
-    GVM_VERSION="1.1.1"
-
     GVM_PATH="$HOME/.gvm"
     GVM_BIN_PATH="$GVM_PATH/bin"
     GVM_ENV_PATH="$GVM_PATH/env"

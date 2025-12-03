@@ -3,7 +3,7 @@
 # Golang-Install
 # Project Home Page:
 # https://github.com/jetsung/golang-install
-# https://framagit.org/jetsung/golang-install
+# https://gitcode.com/jetsung/golang-install
 #
 # Author: Jetsung Chan <jetsungchan@gmail.com>
 
@@ -12,6 +12,10 @@ if [[ -n "${DEBUG:-}" ]]; then
 else
     set -euo pipefail
 fi
+
+# Downlaod URL
+DOWNLOAD_URL="https://dl.google.com/go/"
+DOWNLOAD_CN_URL="https://golang.google.cn/dl/"
 
 script_name=$(basename "$0")
 script_dir_name="${script_name##*/}"
@@ -381,11 +385,12 @@ set_project_url() {
 
     # Project URL
     PROJECT_URL="https://github.com/jetsung/golang-install"
-    PROJECT_CN_URL="https://framagit.org/jetsung/golang-install"
+    PROJECT_CN_URL="https://gitcode.com/jetsung/golang-install"
 
     if [ -n "$IN_CHINA" ]; then
         RELEASE_URL="$RELEASE_CN_URL"
         PROJECT_URL="$PROJECT_CN_URL"
+        DOWNLOAD_URL="$DOWNLOAD_CN_URL"
     fi
 }
 
@@ -393,9 +398,6 @@ main() {
     # GVM
     IS_GVM=""
     GVMPATH=${GVMPATH:-$HOME/.gvm}
-
-    # Downlaod URL
-    DOWNLOAD_URL="https://dl.google.com/go/"
 
     # GOPATH
     # shellcheck disable=SC2016

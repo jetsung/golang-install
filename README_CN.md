@@ -14,10 +14,10 @@
 ## 安装
 
 ```bash
-curl -fsL https://framagit.org/jetsung/golang-install/-/raw/main/gvm.sh | bash
+curl -fsL https://raw.gitcode.com/jetsung/golang-install/raw/main/gvm.sh | bash
 
 # 或者
-git clone https://framagit.org/jetsung/golang-install.git
+git clone https://gitcode.com/jetsung/golang-install.git
 cd golang-install
 ./gvm.sh -i
 
@@ -79,7 +79,7 @@ Options:
 #### 默认安装
 
 ```sh
-curl -fsL https://framagit.org/jetsung/golang-install/-/raw/main/install.sh | bash
+curl -fsL https://raw.gitcode.com/jetsung/golang-install/raw/main/install.sh | bash
 ```
 
 #### 自定义安装
@@ -88,7 +88,7 @@ curl -fsL https://framagit.org/jetsung/golang-install/-/raw/main/install.sh | ba
 - **MY_DIY_GO_PATH** 是自定义版本号, 例如： `/home/myhome/go`
 
 ```sh
-curl -fsL https://framagit.org/jetsung/golang-install/-/raw/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -p MY_DIY_GO_PATH
+curl -fsL https://raw.gitcode.com/jetsung/golang-install/raw/main/install.sh | bash -s -- -v MY_DIY_GO_VERSION -p MY_DIY_GO_PATH
 ```
 
 ### 离线执行
